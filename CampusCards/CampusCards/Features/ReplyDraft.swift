@@ -5,15 +5,24 @@ struct ReplyDraft: Codable, Equatable {
     let taskID: UUID
     let correctedActionID: UUID?
     var kind: ReplyKind
-    var language = CardLanguage.chinese {
-        didSet {
-            if language != oldValue { invalidateSource() }
+    private var sourceLanguage = CardLanguage.chinese
+    var language: CardLanguage {
+        get { sourceLanguage }
+        set {
+            guard newValue != sourceLanguage else { return }
+            sourceLanguage = newValue
+            invalidateSource()
         }
     }
     // The editable, confirmed source. originalText keeps the initial input verbatim.
     var original = "" {
         didSet {
-            if original != oldValue { invalidateSource() }
+            guard original != oldValue else { return }
+            if case let .recognition(language, attached) = pending, attached != nil {
+                // The user supplied words for the released recording while inference was pending.
+                sourceLanguage = language
+            }
+            invalidateSource()
         }
     }
     private(set) var originalText: String?
@@ -29,14 +38,23 @@ struct ReplyDraft: Codable, Equatable {
     private var receivedTranslation: Bool?
     var hasTranslatedCurrentSource: Bool { receivedTranslation == true }
 
-    private enum Operation { case recognition, translation }
+    private enum Operation: Equatable {
+        case recognition(CardLanguage, recordingRef: String?)
+        case translation
+    }
     private enum CodingKeys: String, CodingKey {
-        case id, taskID, correctedActionID, kind, language, original, originalText
+        case id, taskID, correctedActionID, kind, original, originalText
+        case sourceLanguage = "language"
         case recordingRef, translation, speaker, fields, version, receivedTranslation
     }
 
     var isTranslating: Bool { pending == .translation }
-    var isRecognizing: Bool { pending == .recognition }
+    var isRecognizing: Bool {
+        if case .recognition = pending { return true }
+        return false
+    }
+
+    var canReview: Bool { recordingRef != nil || !original.cleaned.isEmpty }
 
     var canConfirm: Bool {
         hasTranslatedCurrentSource && pending == nil && !original.cleaned.isEmpty && !translation.cleaned.isEmpty
@@ -87,25 +105,47 @@ struct ReplyDraft: Codable, Equatable {
         ReplyRequestToken(taskID: taskID, draftID: id, version: version)
     }
 
-    mutating func beginRecognition() -> ReplyRequestToken {
+    mutating func beginRecognition(in language: CardLanguage? = nil) -> ReplyRequestToken {
         invalidateRequests()
-        pending = .recognition
+        pending = .recognition(language ?? self.language, recordingRef: nil)
         return token
+    }
+
+    func expectsRecognition(_ request: ReplyRequestToken) -> Bool {
+        isRecognizing && request == token
+    }
+
+    // The recorder hands ownership to the draft on release, before inference or further edits.
+    mutating func attachRecording(_ reference: String, for request: ReplyRequestToken) -> Bool {
+        guard request == token, case let .recognition(language, _) = pending,
+              Self.isRelativeRecording(reference) else { return false }
+        if original.cleaned.isEmpty { sourceLanguage = language }
+        pending = .recognition(language, recordingRef: reference)
+        recordingRef = reference
+        originalText = nil
+        receivedTranslation = nil
+        translation = ""
+        return true
+    }
+
+    private static func isRelativeRecording(_ reference: String) -> Bool {
+        !reference.isEmpty && !reference.contains(":") && !reference.contains("\\")
+            && reference.split(separator: "/", omittingEmptySubsequences: false)
+                .allSatisfy { !$0.isEmpty && $0 != ".." && $0 != "." }
     }
 
     @discardableResult
     mutating func receiveRecognition(
         text: String, language: CardLanguage, recordingRef: String, for request: ReplyRequestToken
     ) -> Bool {
-        guard isRecognizing, request == token else { return false }
-        guard language == self.language, !text.cleaned.isEmpty, !recordingRef.isEmpty,
-              !recordingRef.contains(":"), !recordingRef.contains("\\"),
-              recordingRef.split(separator: "/", omittingEmptySubsequences: false)
-                .allSatisfy({ !$0.isEmpty && $0 != ".." && $0 != "." }) else {
+        guard request == token, case let .recognition(expected, attached) = pending else { return false }
+        guard language == expected, attached == nil || attached == recordingRef,
+              !text.cleaned.isEmpty, Self.isRelativeRecording(recordingRef) else {
             invalidateRequests()
             return false
         }
         invalidateSource()
+        sourceLanguage = language
         original = text
         originalText = text
         self.recordingRef = recordingRef

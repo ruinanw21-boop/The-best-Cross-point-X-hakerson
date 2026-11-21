@@ -117,6 +117,71 @@ final class ReplyWorkflowTests: XCTestCase {
         XCTAssertFalse(draft.isRecognizing)
     }
 
+    func testReleasedRecordingSurvivesEditsAndReopenWhileRecognitionIsPending() throws {
+        var draft = ReplyDraft(taskID: UUID())
+        draft.original = "已有的文字"
+        let token = draft.beginRecognition(in: .english)
+        let reference = "Recordings/first.wav"
+        XCTAssertTrue(draft.attachRecording(reference, for: token))
+        XCTAssertEqual(draft.language, .chinese)
+        XCTAssertEqual(draft.original, "已有的文字")
+        draft.original = "Which desk should I go to?"
+        XCTAssertEqual(draft.language, .english)
+        XCTAssertFalse(draft.receiveRecognition(text: "stale", language: .english, recordingRef: reference, for: token))
+        let restored = try JSONDecoder().decode(ReplyDraft.self, from: JSONEncoder().encode(draft))
+        XCTAssertEqual(restored.recordingRef, reference)
+        XCTAssertEqual(restored.original, "Which desk should I go to?")
+        XCTAssertFalse(restored.isRecognizing)
+    }
+
+    func testFailedInferenceAndBackPreserveExistingTypedLanguage() {
+        for leaveReview in [true, false] {
+            var draft = ReplyDraft(taskID: UUID())
+            draft.original = "请到一楼服务台"
+            let press = draft.beginRecognition(in: .english)
+            XCTAssertTrue(draft.attachRecording("Recordings/english.wav", for: press))
+            if leaveReview { draft.invalidateRequests() }
+            else { XCTAssertTrue(draft.failRecognition(for: press)) }
+            XCTAssertEqual(draft.original, "请到一楼服务台")
+            XCTAssertEqual(draft.language, .chinese)
+            XCTAssertEqual(draft.recordingRef, "Recordings/english.wav")
+        }
+        var empty = ReplyDraft(taskID: UUID())
+        let press = empty.beginRecognition(in: .english)
+        XCTAssertTrue(empty.attachRecording("Recordings/english.wav", for: press))
+        XCTAssertEqual(empty.language, .english)
+        XCTAssertTrue(empty.canReview)
+    }
+
+    func testSwitchingDraftOrTaskRejectsLateRecordingAndTranscript() {
+        var first = ReplyDraft(taskID: UUID())
+        let old = first.beginRecognition(in: .chinese)
+        for taskID in [first.taskID, UUID()] {
+            var next = ReplyDraft(taskID: taskID)
+            _ = next.beginRecognition(in: .chinese)
+            XCTAssertFalse(next.attachRecording("Recordings/old.wav", for: old))
+            XCTAssertFalse(next.receiveRecognition(
+                text: "请到一楼服务台", language: .chinese, recordingRef: "Recordings/old.wav", for: old
+            ))
+            XCTAssertTrue(next.isRecognizing)
+            XCTAssertNil(next.recordingRef)
+            XCTAssertEqual(next.original, "")
+        }
+    }
+
+    func testUnsuccessfulPressKeepsTypedLanguageAndExistingTranslation() throws {
+        var draft = ReplyDraft(taskID: UUID())
+        draft.original = "请到一楼服务台"
+        let translation = try XCTUnwrap(draft.beginTranslation())
+        draft.receiveTranslation("Go to the first-floor service desk.", for: translation)
+        let press = draft.beginRecognition(in: .english)
+        XCTAssertTrue(draft.failRecognition(for: press))
+        XCTAssertEqual(draft.language, .chinese)
+        XCTAssertEqual(draft.original, "请到一楼服务台")
+        XCTAssertNil(draft.recordingRef)
+        XCTAssertTrue(draft.canConfirm)
+    }
+
     func testOfflineAndTimeoutDraftsRestoreAndRetryWithCurrentText() throws {
         let suite = "ReplyWorkflowTests.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))

@@ -1,5 +1,6 @@
 import SwiftData
 import SwiftUI
+import UIKit
 
 // Task 03 returns the same token it received when local recognition began.
 struct ReplyTranscription {
@@ -14,6 +15,7 @@ typealias ReplyRecognizer = (ReplyRequestToken, CardLanguage) async throws -> Re
 struct ReviewReplyView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
     @Environment(\.cardLanguage) private var language
     @AppStorage("translationBaseAddress") private var serviceAddress = ""
     @State private var draft: ReplyDraft
@@ -23,7 +25,9 @@ struct ReviewReplyView: View {
     @State private var isSaving = false
     @State private var confirmCancel = false
     @State private var editingAddress = false
-    @State private var recognitionFailed = false
+    @StateObject private var capture = ReplyCapture()
+    @State private var press: MicrophonePress?
+    @State private var recognitionMessage: String?
     @State private var worker: Task<Void, Never>?
     @State private var closing = false
     @State private var didRestore = false
@@ -43,6 +47,11 @@ struct ReviewReplyView: View {
     }
 
     private var lang: CardLanguage { language.wrappedValue }
+
+    private var hasDraftContent: Bool {
+        draft.recordingRef != nil || !draft.original.cleaned.isEmpty || !draft.speaker.cleaned.isEmpty
+            || !draft.confirmedFields.isEmpty
+    }
 
     private var missing: [RequirementKind] {
         let answered = Set(existingActions.map(\.kind) + draft.confirmedFields.map(\.kind))
@@ -67,9 +76,8 @@ struct ReviewReplyView: View {
                         if reviewing {
                             stopWork()
                             reviewing = false
-                        } else if draft.original.cleaned.isEmpty && draft.speaker.cleaned.isEmpty
-                                    && draft.confirmedFields.isEmpty {
-                            close(keepingDraft: false)
+                        } else if !hasDraftContent {
+                            close(.discard)
                         } else {
                             confirmCancel = true
                         }
@@ -94,7 +102,7 @@ struct ReviewReplyView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .buttonBorderShape(.roundedRectangle(radius: 16))
-                .disabled(isSaving || (reviewing ? !draft.canConfirm : draft.original.cleaned.isEmpty))
+                .disabled(isSaving || (reviewing ? !draft.canConfirm : !draft.canReview))
                 .accessibilityIdentifier(reviewing ? "confirm-reply" : "review-reply")
                 .padding(.horizontal, 20)
                 .padding(.vertical, 10)
@@ -102,16 +110,15 @@ struct ReviewReplyView: View {
             }
             .modifier(SaveErrorAlert(presented: $saveError))
             .confirmationDialog(lang.text("Close this draft?"), isPresented: $confirmCancel, titleVisibility: .visible) {
-                Button(lang.text("Keep draft and close")) { close(keepingDraft: true) }
-                Button(lang.text("Discard reply"), role: .destructive) { close(keepingDraft: false) }
+                Button(lang.text("Keep draft and close")) { close(.keep) }
+                Button(lang.text("Discard reply"), role: .destructive) { close(.discard) }
                 Button(lang.text("Keep editing"), role: .cancel) {}
             }
             .sheet(item: $followUp) { content in
                 ShowCardView(card: content)
             }
         }
-        .interactiveDismissDisabled(!draft.original.cleaned.isEmpty || !draft.speaker.cleaned.isEmpty
-                                    || draft.kind == .correction || !draft.confirmedFields.isEmpty)
+        .interactiveDismissDisabled(hasDraftContent || press != nil || draft.kind == .correction)
         .onAppear {
             closing = false
             restoreDraft()
@@ -119,14 +126,20 @@ struct ReviewReplyView: View {
         .onChange(of: draft) { _, current in
             if !closing { ReplyDraftCache().save(current) }
         }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .background, press != nil {
+                stopWork()
+                recognitionMessage = ReplyCaptureError.interrupted.messageKey
+            }
+        }
         .onDisappear {
             if !closing {
                 closing = true
                 stopWork()
-                if draft.original.cleaned.isEmpty && draft.speaker.cleaned.isEmpty && draft.confirmedFields.isEmpty {
-                    ReplyDraftCache().remove(draft)
-                } else {
+                if hasDraftContent {
                     ReplyDraftCache().save(draft)
+                } else {
+                    ReplyDraftCache().remove(draft)
                 }
             }
         }
@@ -150,18 +163,33 @@ struct ReviewReplyView: View {
 
         Section(lang.text("Original reply")) {
             sourceField
-            if let recognize {
-                Button {
-                    startRecognition(recognize)
-                } label: {
-                    Label(lang.text(draft.isRecognizing ? "Transcribing…" : "Record reply"), systemImage: "mic")
-                }
-                .disabled(draft.isRecognizing)
-                if recognitionFailed {
-                    Text(lang.text("Couldn’t transcribe. Try again or type the reply."))
-                        .foregroundStyle(.secondary)
-                }
+            ForEach([CardLanguage.chinese, .english]) { source in
+                let isHeld = press?.language == source
+                let title = isHeld && capture.isRecording ? "Recording… Release to review."
+                    : (source == .chinese ? "Hold to speak Chinese" : "Hold to speak English")
+                HoldMicrophoneButton(title: lang.text(title), isHeld: isHeld,
+                    hint: lang.text("Double-tap to start or stop recording."),
+                    identifier: source == .chinese ? "microphone-zh" : "microphone-en",
+                    onPress: { beginPress(in: source) }, onRelease: { endPress(in: source) },
+                    onCancel: {
+                        guard press?.language == source else { return }
+                        // The system permission sheet may cancel the touch before the user can lift.
+                        if capture.isRecording { stopWork() } else { endPress(in: source) }
+                    })
+                    .frame(minHeight: 44)
             }
+            recognitionFeedback
+        }
+    }
+
+    @ViewBuilder
+    private var recognitionFeedback: some View {
+        if let message = recognitionMessage ?? (press == nil ? nil : capture.issue?.messageKey) {
+            Text(lang.text(message))
+                .foregroundStyle(.secondary)
+                .accessibilityIdentifier("recognition-error")
+        } else if draft.isRecognizing && reviewing {
+            ProgressView(lang.text("Transcribing…"))
         }
     }
 
@@ -184,6 +212,10 @@ struct ReviewReplyView: View {
         Section(lang.text("Review source text")) {
             languagePicker
             sourceField
+            if let reference = draft.recordingRef {
+                RecordingPlaybackButton(recordingRef: reference)
+            }
+            recognitionFeedback
         }
 
         Section(lang.text(draft.language == .chinese ? "English translation" : "Chinese translation")) {
@@ -213,7 +245,7 @@ struct ReviewReplyView: View {
                     Label(lang.text(translationButtonTitle), systemImage: "character.bubble")
                 }
             }
-            .disabled(draft.original.cleaned.isEmpty || serviceAddress.cleaned.isEmpty || draft.isTranslating)
+            .disabled(draft.original.cleaned.isEmpty || serviceAddress.cleaned.isEmpty || draft.isTranslating || draft.isRecognizing)
             .accessibilityIdentifier("translate-reply")
 
             if let error = draft.translationError {
@@ -230,7 +262,9 @@ struct ReviewReplyView: View {
                     .accessibilityIdentifier("reviewed-translation")
             }
         }
-        .onChange(of: serviceAddress) { _, _ in stopWork() }
+        .onChange(of: serviceAddress) { _, _ in
+            if draft.isTranslating { stopWork() }
+        }
 
         if draft.kind == .directions {
             Section {
@@ -313,28 +347,72 @@ struct ReviewReplyView: View {
         }
     }
 
-    private func startRecognition(_ recognize: @escaping ReplyRecognizer) {
-        let token = draft.beginRecognition()
-        let source = draft.language
+    private func beginPress(in source: CardLanguage) {
+        guard !closing, press == nil else { return }
         worker?.cancel()
-        recognitionFailed = false
+        recognitionMessage = nil
+        let token = draft.beginRecognition(in: source)
+        press = MicrophonePress(token: token, language: source)
+        if recognize == nil { capture.begin(token) }
+    }
+
+    private func endPress(in source: CardLanguage) {
+        guard let current = press, current.language == source else { return }
+        press = nil
+        let token = current.token
+        guard !closing, draft.expectsRecognition(token) else {
+            capture.cancel()
+            return
+        }
+        let previous = draft.recordingRef
+        let reference = recognize == nil ? capture.finish(token) : nil
+        if let reference {
+            guard draft.attachRecording(reference, for: token) else {
+                ReplyRecordingFiles().remove(reference)
+                capture.cancel()
+                draft.failRecognition(for: token)
+                recognitionMessage = "Couldn’t transcribe. Try again or type the reply."
+                return
+            }
+            cacheRecording(replacing: previous)
+        }
+        reviewing = true
+        let recognizer: ReplyRecognizer = recognize ?? { try await capture.recognize($0, $1) }
         worker = Task { @MainActor in
             do {
-                let result = try await recognize(token, source)
-                guard draft.isRecognizing, token.taskID == draft.taskID, token.draftID == draft.id,
-                      token.version == draft.version else { return }
-                if result.token == token, draft.receiveRecognition(
-                    text: result.originalText, language: result.language, recordingRef: result.recordingRef, for: token
-                ) {
-                    reviewing = true
-                } else {
+                let result = try await recognizer(token, source)
+                guard !closing, draft.expectsRecognition(token) else { return }
+                guard result.token == token, reference == nil || reference == result.recordingRef,
+                      draft.receiveRecognition(text: result.originalText, language: result.language,
+                                               recordingRef: result.recordingRef, for: token) else {
                     draft.failRecognition(for: token)
-                    recognitionFailed = true
+                    recognitionMessage = "Couldn’t transcribe. Try again or type the reply."
+                    return
                 }
+                if reference == nil { cacheRecording(replacing: previous) }
             } catch {
-                if draft.failRecognition(for: token) { recognitionFailed = true }
+                guard !closing, draft.failRecognition(for: token) else { return }
+                if let error = error as? ReplyCaptureError {
+                    recognitionMessage = error.messageKey
+                } else if case .resourcesUnavailable = error as? OfflineTranscriptionError {
+                    recognitionMessage = "Offline speech resources are unavailable. You can type the reply."
+                } else {
+                    recognitionMessage = "Couldn’t transcribe. Try again or type the reply."
+                }
             }
         }
+    }
+
+    private func cacheRecording(replacing previous: String?) {
+        // Persist the new reference before retiring its predecessor.
+        ReplyDraftCache().save(draft)
+        if let previous, previous != draft.recordingRef { removeUnsavedRecording(previous) }
+    }
+
+    private func removeUnsavedRecording(_ reference: String) {
+        let uses = FetchDescriptor<ConversationTurn>(predicate: #Predicate { $0.recordingRef == reference })
+        guard (try? context.fetchCount(uses)) == 0 else { return }
+        ReplyRecordingFiles().remove(reference)
     }
 
     private func restoreDraft() {
@@ -349,20 +427,32 @@ struct ReviewReplyView: View {
             cache.remove(saved)
         } else {
             draft = saved
-            reviewing = saved.originalText != nil
+            reviewing = saved.originalText != nil || saved.recordingRef != nil
         }
     }
 
     private func stopWork() {
+        press = nil
+        capture.cancel()
         draft.invalidateRequests()
         worker?.cancel()
         worker = nil
     }
 
-    private func close(keepingDraft: Bool) {
+    private enum CloseAction { case keep, discard, saved }
+
+    private func close(_ action: CloseAction) {
         closing = true
         stopWork()
-        if keepingDraft { ReplyDraftCache().save(draft) } else { ReplyDraftCache().remove(draft) }
+        switch action {
+        case .keep:
+            ReplyDraftCache().save(draft)
+        case .discard, .saved:
+            ReplyDraftCache().remove(draft)
+            if action == .discard, let reference = draft.recordingRef {
+                removeUnsavedRecording(reference)
+            }
+        }
         dismiss()
     }
 
@@ -372,11 +462,56 @@ struct ReviewReplyView: View {
         do {
             let turn = try TaskStore(context: context).confirmReply(draft)
             onSaved(turn.id)
-            close(keepingDraft: false)
+            close(.saved)
         } catch {
             isSaving = false
             saveError = true
         }
+    }
+}
+
+private struct MicrophonePress {
+    let token: ReplyRequestToken
+    let language: CardLanguage
+}
+
+// A control receives touch cancellation as well as release, including inside a scrolling Form.
+private struct HoldMicrophoneButton: UIViewRepresentable {
+    let title: String
+    let isHeld: Bool
+    let hint: String
+    let identifier: String
+    let onPress: () -> Void
+    let onRelease: () -> Void
+    let onCancel: () -> Void
+
+    final class Control: UIButton {
+        var toggleRecording: (() -> Void)?
+
+        override func accessibilityActivate() -> Bool {
+            toggleRecording?()
+            return true
+        }
+    }
+
+    func makeUIView(context: Context) -> Control {
+        Control()
+    }
+
+    func updateUIView(_ button: Control, context: Context) {
+        var config = UIButton.Configuration.tinted()
+        config.title = title
+        config.image = UIImage(systemName: isHeld ? "mic.fill" : "mic")
+        config.imagePadding = 8
+        button.configuration = config
+        button.accessibilityHint = hint
+        button.accessibilityIdentifier = identifier
+        button.toggleRecording = isHeld ? onRelease : onPress
+        // Reusing identifiers replaces the actions on updates without multiplying handlers.
+        button.addAction(UIAction(identifier: .init(rawValue: "press")) { _ in onPress() }, for: .touchDown)
+        button.addAction(UIAction(identifier: .init(rawValue: "release")) { _ in onRelease() },
+                         for: [.touchUpInside, .touchUpOutside])
+        button.addAction(UIAction(identifier: .init(rawValue: "cancel")) { _ in onCancel() }, for: .touchCancel)
     }
 }
 

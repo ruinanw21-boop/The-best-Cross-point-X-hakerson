@@ -1,0 +1,53 @@
+name: CampusCards Xcode tests
+
+on:
+  pull_request:
+    paths:
+      - 'CampusCards/**'
+      - '.github/workflows/campuscards-xcode.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: campuscards-ios-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  simulator:
+    runs-on: macos-15
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare bundled speech resources
+        run: python3 CampusCards/Scripts/prepare_offline_speech.py
+      - name: Run CampusCards on iPhone Simulator
+        working-directory: CampusCards
+        run: |
+          xcodebuild -version
+          xcrun simctl list devices available
+          simulator=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          runtimes = json.load(sys.stdin)["devices"]
+          candidates = [(tuple(map(int, runtime.split("iOS-")[1].split("-"))), device)
+                        for runtime, devices in runtimes.items() if "iOS-" in runtime
+                        for device in devices if device["name"].startswith("iPhone")]
+          print(max((entry for entry in candidates if entry[0][0] >= 18), key=lambda entry: entry[0])[1]["udid"])
+          ')
+          xcodebuild -project CampusCards.xcodeproj -scheme CampusCards \
+            -destination "platform=iOS Simulator,id=$simulator" \
+            -parallel-testing-enabled NO -resultBundlePath "$RUNNER_TEMP/CampusCards.xcresult" \
+            test
+      - name: Share the tested Xcode project with bundled speech resources
+        uses: actions/upload-artifact@v4
+        with:
+          name: CampusCards-Xcode
+          path: CampusCards/
+          retention-days: 7
+      - name: Save XCTest results and transcripts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: CampusCards-xcresult
+          path: ${{ runner.temp }}/CampusCards.xcresult
+          if-no-files-found: ignore
