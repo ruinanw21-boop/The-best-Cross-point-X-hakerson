@@ -9,6 +9,7 @@ struct TaskDetailView: View {
     @Query private var turns: [ConversationTurn]
     @State private var card: CardContent?
     @State private var reply: ReplyPresentation?
+    @State private var replySource: ConversationTurn?
     @State private var recordAfterCard = false
     @State private var saveError = false
 
@@ -30,8 +31,6 @@ struct TaskDetailView: View {
             Section {
                 header
             }
-            .listRowBackground(Color.clear)
-            .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 4, trailing: 0))
 
             Section(lang.text("Action checklist")) {
                 if actions.isEmpty {
@@ -86,9 +85,13 @@ struct TaskDetailView: View {
                 .accessibilityIdentifier("toggle-complete")
             }
         }
+        .listStyle(.insetGrouped)
         .navigationTitle(lang.text("Task details"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { ToolbarItem(placement: .topBarTrailing) { LanguageMenu() } }
+        .navigationDestination(item: $replySource) { turn in
+            ReplySourceView(turn: turn)
+        }
         .fullScreenCover(item: $card, onDismiss: {
             if recordAfterCard {
                 recordAfterCard = false
@@ -124,9 +127,8 @@ struct TaskDetailView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(20)
-        .foregroundStyle(CampusStyle.cardInk)
-        .background(CampusStyle.paper, in: RoundedRectangle(cornerRadius: 24))
+        .padding(.vertical, 8)
+        .controlSize(.large)
     }
 
     @ViewBuilder
@@ -137,6 +139,7 @@ struct TaskDetailView: View {
             Label(lang.text("Show card"), systemImage: "text.bubble")
         }
         .buttonStyle(.borderedProminent)
+        .tint(CampusStyle.actionFill)
         .accessibilityIdentifier("show-question")
 
         Button {
@@ -170,6 +173,19 @@ struct TaskDetailView: View {
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
                 LanguageLines(text: item.text, primary: lang)
+
+                if let turn = turns.first(where: { $0.id == item.sourceTurnID }) {
+                    Button {
+                        replySource = turn
+                    } label: {
+                        Label(lang.text("View source"), systemImage: "text.bubble")
+                            .font(.subheadline)
+                            .frame(minHeight: 44, alignment: .leading)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.borderless)
+                    .accessibilityIdentifier("requirement-source-\(item.kind.rawValue)")
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.vertical, 4)
@@ -192,16 +208,7 @@ struct TaskDetailView: View {
 
     private func historyRow(_ turn: ConversationTurn) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Label(lang.text(turn.kind.label), systemImage: turn.kind == .directions ? "location" : "bubble.left")
-                .font(.subheadline.weight(.semibold))
-
-            Text(turn.confirmedAt, format: .dateTime.month().day().hour().minute())
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            if !turn.speaker.isEmpty {
-                Text(verbatim: turn.speaker).font(.caption).foregroundStyle(.secondary)
-            }
+            ReplyMetadata(turn: turn)
 
             Text(verbatim: turn.original)
                 .environment(\.locale, turn.originalLanguage.locale)
@@ -233,6 +240,57 @@ struct TaskDetailView: View {
             try persist(TaskStore(context: context))
         } catch {
             saveError = true
+        }
+    }
+}
+
+private struct ReplySourceView: View {
+    @Environment(\.cardLanguage) private var language
+    let turn: ConversationTurn
+
+    var body: some View {
+        let lang = language.wrappedValue
+        List {
+            Section {
+                ReplyMetadata(turn: turn)
+            }
+            Section(lang.text("Original reply")) {
+                Text(verbatim: turn.original)
+                    .environment(\.locale, turn.originalLanguage.locale)
+                    .textSelection(.enabled)
+                    .accessibilityIdentifier("source-original")
+            }
+            if !turn.translation.isEmpty {
+                Section(lang.text("Translation")) {
+                    Text(verbatim: turn.translation)
+                        .environment(\.locale, turn.originalLanguage.other.locale)
+                        .textSelection(.enabled)
+                }
+            }
+        }
+        .listStyle(.insetGrouped)
+        .navigationTitle(lang.text("Reply source"))
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar { ToolbarItem(placement: .topBarTrailing) { LanguageMenu() } }
+    }
+}
+
+private struct ReplyMetadata: View {
+    @Environment(\.cardLanguage) private var language
+    let turn: ConversationTurn
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Label(language.wrappedValue.text(turn.kind.label), systemImage: turn.kind == .directions ? "location" : "bubble.left")
+                .font(.subheadline.weight(.semibold))
+            Text(turn.confirmedAt, format: .dateTime.month().day().hour().minute())
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            if !turn.speaker.isEmpty {
+                Text(verbatim: turn.speaker)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 }

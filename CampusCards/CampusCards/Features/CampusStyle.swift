@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 private struct CardLanguageKey: EnvironmentKey {
     static let defaultValue: Binding<CardLanguage> = .constant(.english)
@@ -12,9 +13,24 @@ extension EnvironmentValues {
 }
 
 enum CampusStyle {
-    static let ink = Color(.sRGB, red: 0.27, green: 0.25, blue: 0.76)
-    static let cardInk = Color(.sRGB, red: 0.12, green: 0.12, blue: 0.27)
-    static let paper = Color(.sRGB, red: 0.95, green: 0.94, blue: 1.0)
+    private static let serviceBlue = UIColor(red: 36.0 / 255, green: 86.0 / 255, blue: 148.0 / 255, alpha: 1)
+    static let actionFill = Color(uiColor: serviceBlue)
+    static let accent = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 155.0 / 255, green: 198.0 / 255, blue: 250.0 / 255, alpha: 1)
+            : serviceBlue
+    })
+    static let canvas = Color(uiColor: .systemGroupedBackground)
+    static let paper = Color(uiColor: .secondarySystemGroupedBackground)
+}
+
+extension View {
+    func campusActionBar() -> some View {
+        controlSize(.large)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 10)
+            .background(.regularMaterial)
+    }
 }
 
 struct LanguageMenu: View {
@@ -22,7 +38,7 @@ struct LanguageMenu: View {
 
     var body: some View {
         Menu {
-            Picker("Language", selection: language) {
+            Picker(language.wrappedValue.text("Language"), selection: language) {
                 ForEach(CardLanguage.allCases) { choice in
                     Text(verbatim: choice.name).tag(choice)
                 }

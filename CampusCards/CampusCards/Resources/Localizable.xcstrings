@@ -34,13 +34,79 @@
         }
       }
     },
-    "Ask at the desk.\nKeep the answer.": {
+    "Chinese appears first when you show this card.": {
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "柜台当面问，\n答复随身带。"
+            "value": "出示卡片时，默认先显示大字中文。"
+          }
+        }
+      }
+    },
+    "Checklist edits don’t change the original reply.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "修改清单不会改变这轮答复的原话。"
+          }
+        }
+      }
+    },
+    "Reply source": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "答复依据"
+          }
+        }
+      }
+    },
+    "Time on the checklist": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清单上的时间"
+          }
+        }
+      }
+    },
+    "Translation": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "译文"
+          }
+        }
+      }
+    },
+    "View source": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "查看依据"
+          }
+        }
+      }
+    },
+    "No tasks yet": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "还没有事项"
           }
         }
       }

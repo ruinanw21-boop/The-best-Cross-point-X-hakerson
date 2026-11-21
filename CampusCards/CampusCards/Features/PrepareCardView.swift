@@ -55,9 +55,13 @@ struct PrepareCardView: View {
             }
 
             if !question.isEmpty {
-                Section(lang.text("Card preview")) {
-                    LanguageLines(text: question, primary: .chinese)
-                        .padding(.vertical, 5)
+                Section {
+                    LanguageLines(text: question, primary: lang)
+                        .padding(.vertical, 4)
+                } header: {
+                    Text(lang.text("Card preview"))
+                } footer: {
+                    Text(lang.text("Chinese appears first when you show this card."))
                 }
             }
         }
@@ -70,15 +74,12 @@ struct PrepareCardView: View {
                 Text(lang.text("Create task"))
                     .font(.headline)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
             }
             .buttonStyle(.borderedProminent)
-            .buttonBorderShape(.roundedRectangle(radius: 16))
+            .tint(CampusStyle.actionFill)
             .disabled(title.isEmpty || question.isEmpty)
             .accessibilityIdentifier("create-task")
-            .padding(.horizontal, 20)
-            .padding(.vertical, 10)
-            .background(.regularMaterial)
+            .campusActionBar()
         }
         .modifier(SaveErrorAlert(presented: $saveError))
     }

@@ -19,7 +19,7 @@ struct CampusCardsApp: App {
                     ProgressView().task { loadStore() }
                 }
             }
-            .tint(CampusStyle.ink)
+            .tint(CampusStyle.accent)
             .environment(\.cardLanguage, language)
             .environment(\.locale, language.wrappedValue.locale)
         }
@@ -53,6 +53,7 @@ private struct StorageRecoveryView: View {
         } actions: {
             Button(language.wrappedValue.text("Try again"), action: retry)
                 .buttonStyle(.borderedProminent)
+                .tint(CampusStyle.actionFill)
         }
     }
 }

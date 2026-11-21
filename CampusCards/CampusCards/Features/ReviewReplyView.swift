@@ -63,15 +63,12 @@ struct ReviewReplyView: View {
                     Text(lang.text(reviewing ? "Confirm and save" : "Review reply"))
                         .font(.headline)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 8)
                 }
                 .buttonStyle(.borderedProminent)
-                .buttonBorderShape(.roundedRectangle(radius: 16))
+                .tint(CampusStyle.actionFill)
                 .disabled(isSaving || (reviewing ? !canSave : draft.original.cleaned.isEmpty))
                 .accessibilityIdentifier(reviewing ? "confirm-reply" : "review-reply")
-                .padding(.horizontal, 20)
-                .padding(.vertical, 10)
-                .background(.regularMaterial)
+                .campusActionBar()
             }
             .modifier(SaveErrorAlert(presented: $saveError))
             .confirmationDialog(lang.text("Discard this reply?"), isPresented: $confirmCancel, titleVisibility: .visible) {
@@ -117,10 +114,19 @@ struct ReviewReplyView: View {
 
     @ViewBuilder
     private var reviewSections: some View {
-        Section(lang.text("Original reply")) {
+        Section {
             Text(verbatim: draft.original)
                 .environment(\.locale, draft.language.locale)
+                .textSelection(.enabled)
+        } header: {
+            Text(lang.text("Original reply"))
+        } footer: {
+            if draft.kind != .directions {
+                Text(lang.text("Checklist edits don’t change the original reply."))
+            }
+        }
 
+        Section(lang.text("Translation")) {
             let placeholder = draft.language == .chinese
                 ? "English translation (optional)" : "Chinese translation (optional)"
             TextField(lang.text(placeholder), text: $draft.translation, axis: .vertical)
@@ -231,7 +237,13 @@ private struct FieldEditor: View {
 
             Toggle(lang.text("Arrive by this time"), isOn: $field.time.isCutoff)
 
-            LanguageLines(text: field.time.text, primary: lang)
+            VStack(alignment: .leading, spacing: 6) {
+                Text(lang.text("Time on the checklist"))
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                LanguageLines(text: field.time.text, primary: lang)
+            }
+            .padding(.vertical, 4)
         }
     }
 
