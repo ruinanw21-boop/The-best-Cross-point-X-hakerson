@@ -118,8 +118,8 @@ final class ActionItem {
     var text: BilingualText { time?.text ?? .init(english: valueEnglish, chinese: valueChinese) }
 
     func revise(from field: FieldDraft, sourceTurnID: UUID) {
-        let previousText = text
-        let previousTime = time
+        // Reconfirming an unchanged field keeps its earlier source and checklist state.
+        guard time != field.confirmedTime || text != field.effectiveText else { return }
         self.sourceTurnID = sourceTurnID
         userEdited = field.userEdited
         valueEnglish = field.confirmedText.english
@@ -127,8 +127,6 @@ final class ActionItem {
         timeWeekday = field.confirmedTime?.weekday.rawValue
         timeMinute = field.confirmedTime?.minuteOfDay
         timeIsCutoff = field.confirmedTime?.isCutoff ?? true
-        if previousText != text || previousTime != time {
-            isChecked = false
-        }
+        isChecked = false
     }
 }

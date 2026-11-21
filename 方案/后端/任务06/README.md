@@ -38,6 +38,14 @@
 
 地点和材料共用一条指向第一轮的图线时，仍须保留各自的字段依据。旧版本保存的字段会根据首次写入的时间戳恢复行动分组。若创建记录缺失或有冲突，该字段单独显示。
 
+## 保存更正和更新进度
+
+图谱编辑已有行动时，用 `ReplyDraft(taskID: taskID, correctingActionID: action.id, changes: fields)` 建草稿，再照常调用 `confirmReply`。传入本轮确认的字段；选中某份材料时，将 `FieldDraft.targetFieldID` 设为那一行的 `id`。字段缺失时可在该行动上补填。同值字段保留原来源和勾选状态。柜台另提新要求时用普通 `ReplyDraft(taskID: taskID)`，重试时复用同一份草稿。
+
+按行动 ID 调用 `setItemDone(itemID: action.id, done: true)` 可一次勾选该行动的字段。原清单的材料按钮继续单独勾选所选材料。按事项 ID 调用 `setTaskCompleted(taskID: taskID, completed: true)` 办结，传入 `false` 重开。`listTasks()` 将进行中的事项排在前面，每组按最近更新时间排序。
+
 ## SwiftData 读回样例
 
 在本 PR 的 GitHub Actions 运行页下载 `task-readback`。其中的 JSON 由示例程序用上述演示文字和预填译文写入临时数据库，重新打开后调用 `loadTask` 生成。ID 由运行时分配。iPhone 的录音、回放和图谱点按留待集成版验收。[样例程序](../../../CampusCards/Scripts/ExportTaskReadback.swift)
+
+`beforeCorrection` 和 `twoTurnCorrection` 是同一事项改时前后的结果，可直接比较行动 ID 和三个字段的来源。`afterRetry` 是追加学生证并重试后的结果。示例的录音引用只演示相对路径格式，音频由真机录入时生成。

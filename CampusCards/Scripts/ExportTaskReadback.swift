@@ -6,7 +6,15 @@ import SwiftData
 @MainActor
 struct ExportTaskReadback {
     enum ExportError: Error {
-        case rejectedTranslation
+        case rejectedTranslation, missingDeadline, rejectedRecording
+    }
+
+    struct Export: Encodable {
+        let sameTurnEdit: TaskReadback
+        let beforeCorrection: TaskReadback
+        let twoTurnCorrection: TaskReadback
+        let afterRetry: TaskReadback
+        let inputNote = "示例使用预设译文。第二轮使用模拟转写和录音相对路径，未生成音频文件。"
     }
 
     static func main() throws {
@@ -19,10 +27,20 @@ struct ExportTaskReadback {
             at: url, title: "补交材料（同轮手改）", editDeadline: true
         )
         let sameTurnEdit = try readTask(sameTurnID, at: url)
+        let correctedID = try saveFirstTask(at: url, title: "补交材料", editDeadline: false)
+        let beforeCorrection = try readTask(correctedID, at: url)
+        try correctDeadline(for: correctedID, at: url)
+        let twoTurnCorrection = try readTask(correctedID, at: url)
+        try addStudentID(for: correctedID, at: url)
+        let afterRetry = try readTask(correctedID, at: url)
+
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
-        let data = try encoder.encode(["sameTurnEdit": sameTurnEdit])
+        let data = try encoder.encode(Export(
+            sameTurnEdit: sameTurnEdit, beforeCorrection: beforeCorrection,
+            twoTurnCorrection: twoTurnCorrection, afterRetry: afterRetry
+        ))
         print(String(decoding: data, as: UTF8.self))
     }
 
@@ -41,6 +59,44 @@ struct ExportTaskReadback {
               draft.receiveTranslation(translation, for: token) else {
             throw ExportError.rejectedTranslation
         }
+    }
+
+    static func correctDeadline(for taskID: UUID, at url: URL) throws {
+        let database = try container(at: url)
+        let store = TaskStore(context: database.mainContext)
+        let snapshot = try store.loadTask(taskID)
+        guard let action = snapshot.actions.first,
+              let deadline = action.fields.first(where: { $0.field == .deadline }),
+              var time = deadline.time else {
+            throw ExportError.missingDeadline
+        }
+        time.minuteOfDay = 15 * 60 + 30
+        var change = FieldDraft(kind: .deadline)
+        change.targetFieldID = deadline.id
+        change.confirmExactTime(time)
+        var draft = ReplyDraft(taskID: taskID, correctingActionID: action.id, changes: [change])
+        let token = draft.beginRecognition(in: .chinese)
+        let path = "Recordings/ECF93A77-1A58-47F6-893D-994AA7A00B28.wav"
+        guard draft.attachRecording(path, for: token),
+              draft.receiveRecognition(
+                text: "改到下午三点半，地点不变", language: .chinese, recordingRef: path, for: token
+              ) else { throw ExportError.rejectedRecording }
+        try applyTranslation("Change the time to 3:30 p.m. The location stays the same.", to: &draft)
+        try store.confirmReply(draft)
+        try store.confirmReply(draft)
+    }
+
+    static func addStudentID(for taskID: UUID, at url: URL) throws {
+        let database = try container(at: url)
+        let store = TaskStore(context: database.mainContext)
+        var draft = ReplyDraft(taskID: taskID)
+        draft.original = "还要带学生证"
+        try applyTranslation("Also bring your student ID.", to: &draft)
+        var material = FieldDraft(kind: .material)
+        material.text = .init(english: "Student ID", chinese: "学生证")
+        draft.fields = [material]
+        try store.confirmReply(draft)
+        try store.confirmReply(draft)
     }
 
     static func saveFirstTask(at url: URL, title: String, editDeadline: Bool) throws -> UUID {

@@ -419,7 +419,7 @@ struct ReviewReplyView: View {
         guard !didRestore else { return }
         didRestore = true
         let cache = ReplyDraftCache()
-        guard let saved = cache.load(taskID: task.id, correctedActionID: draft.correctedActionID) else { return }
+        guard let saved = cache.load(for: draft) else { return }
         // A crash between the SwiftData commit and removing the cache can leave a confirmed draft.
         let id = saved.id
         let match = FetchDescriptor<ConversationTurn>(predicate: #Predicate { $0.id == id })
