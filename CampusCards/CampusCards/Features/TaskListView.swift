@@ -2,9 +2,11 @@ import SwiftData
 import SwiftUI
 
 struct TaskListView: View {
+    @Environment(\.modelContext) private var context
     @Environment(\.cardLanguage) private var language
     @Query(sort: \CampusTask.updatedAt, order: .reverse) private var tasks: [CampusTask]
     @State private var path: [Route] = []
+    @State private var saveError = false
 
     private enum Route: Hashable {
         case prepare
@@ -29,6 +31,8 @@ struct TaskListView: View {
                     }
                 }
             }
+            .background(CampusStyle.canvas.ignoresSafeArea())
+            .modifier(SaveErrorAlert(presented: $saveError))
             .navigationTitle(lang.text("My tasks"))
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) { LanguageMenu() }
@@ -56,6 +60,21 @@ struct TaskListView: View {
         } actions: {
             newTaskButton
                 .controlSize(.large)
+            Button(lang.text("Add enrollment example"), action: addEnrollmentExample)
+                .buttonStyle(.borderless)
+        }
+    }
+
+    private func addEnrollmentExample() {
+        let scenario = TaskScenario.enrollment
+        let fields = RequirementKind.allCases.filter(scenario.defaultFields.contains)
+        do {
+            let task = try TaskStore(context: context).createTask(
+                scenario: scenario, title: scenario.title, question: scenario.question(asking: fields), fields: fields
+            )
+            path = [.task(task.id)]
+        } catch {
+            saveError = true
         }
     }
 

@@ -33,6 +33,21 @@ struct ReplyDraft {
         }
     }
 
+    mutating func applyReviewedField(_ updated: FieldDraft) {
+        guard let index = fields.firstIndex(where: { $0.id == updated.id }) else { return }
+        let previous = fields[index]
+        var field = updated
+        if kind != .correction, !previous.effectiveText.isEmpty, !field.effectiveText.isEmpty,
+           previous.effectiveText != field.effectiveText || previous.confirmedTime != field.confirmedTime {
+            field.wasEditedDuringReview = true
+        }
+        fields[index] = field
+    }
+
+    var hasContent: Bool {
+        !original.cleaned.isEmpty || !speaker.cleaned.isEmpty || !confirmedFields.isEmpty
+    }
+
     var confirmedFields: [FieldDraft] {
         guard kind != .directions else { return [] }
         return fields.filter { !$0.effectiveText.isEmpty }
@@ -44,6 +59,7 @@ struct FieldDraft: Identifiable {
     let kind: RequirementKind
     var text = BilingualText()
     var pendingReview: CardLanguage?
+    var wasEditedDuringReview = false
     var useExactTime = false
     var time = ConfirmedTime()
 

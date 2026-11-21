@@ -56,8 +56,11 @@ struct PrepareCardView: View {
 
             if !question.isEmpty {
                 Section {
-                    LanguageLines(text: question, primary: lang)
-                        .padding(.vertical, 4)
+                    TicketSurface {
+                        TicketQuestion(text: question, primary: lang)
+                    }
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
                 } header: {
                     Text(lang.text("Card preview"))
                 } footer: {
@@ -65,6 +68,8 @@ struct PrepareCardView: View {
                 }
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(CampusStyle.canvas)
         .scrollDismissesKeyboard(.interactively)
         .navigationTitle(lang.text("New task"))
         .navigationBarTitleDisplayMode(.inline)

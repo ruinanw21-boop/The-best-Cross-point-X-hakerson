@@ -13,15 +13,127 @@ extension EnvironmentValues {
 }
 
 enum CampusStyle {
-    private static let serviceBlue = UIColor(red: 36.0 / 255, green: 86.0 / 255, blue: 148.0 / 255, alpha: 1)
-    static let actionFill = Color(uiColor: serviceBlue)
-    static let accent = Color(uiColor: UIColor { traits in
-        traits.userInterfaceStyle == .dark
-            ? UIColor(red: 155.0 / 255, green: 198.0 / 255, blue: 250.0 / 255, alpha: 1)
-            : serviceBlue
-    })
-    static let canvas = Color(uiColor: .systemGroupedBackground)
-    static let paper = Color(uiColor: .secondarySystemGroupedBackground)
+    static let actionFill = Color(uiColor: rgb(0x245694))
+    static let accent = themed(light: 0x245694, dark: 0x9BC6FA)
+    static let canvas = themed(light: 0xF5F8FC, dark: 0x111821)
+    static let paper = themed(light: 0xFFFFFF, dark: 0x192431)
+    static let ticketInk = themed(light: 0x162D4B, dark: 0xE6EFFC)
+    static let rule = themed(light: 0xD5DFEC, dark: 0x34465B)
+    static let pending = themed(light: 0x78541B, dark: 0xEACB92)
+    static let ticketOrder: [RequirementKind] = [.material, .location, .deadline]
+
+    private static func themed(light: UInt32, dark: UInt32) -> Color {
+        let lightColor = rgb(light)
+        let darkColor = rgb(dark)
+        return Color(uiColor: UIColor { traits in
+            traits.userInterfaceStyle == .dark ? darkColor : lightColor
+        })
+    }
+
+    private static func rgb(_ hex: UInt32) -> UIColor {
+        UIColor(
+            red: CGFloat((hex >> 16) & 255) / 255,
+            green: CGFloat((hex >> 8) & 255) / 255,
+            blue: CGFloat(hex & 255) / 255,
+            alpha: 1
+        )
+    }
+}
+
+struct TicketSurface<Content: View>: View {
+    let content: Content
+
+    init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+
+    var body: some View {
+        content
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(20)
+            .foregroundStyle(CampusStyle.ticketInk)
+            .background(CampusStyle.paper, in: RoundedRectangle(cornerRadius: 18))
+            .overlay {
+                RoundedRectangle(cornerRadius: 18)
+                    .strokeBorder(CampusStyle.rule, lineWidth: 1)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+    }
+}
+
+struct TicketRule: View {
+    var body: some View {
+        Divider()
+            .overlay(CampusStyle.rule)
+            .accessibilityHidden(true)
+    }
+}
+
+struct TicketQuestion: View {
+    @Environment(\.cardLanguage) private var language
+    @ScaledMetric(relativeTo: .largeTitle) private var displaySize: CGFloat = 38
+    let text: BilingualText
+    let primary: CardLanguage
+    var forDisplay = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: forDisplay ? 22 : 14) {
+            passage(primary, emphasized: true)
+            TicketRule()
+            passage(primary.other, emphasized: false)
+        }
+    }
+
+    private func passage(_ cardLanguage: CardLanguage, emphasized: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(verbatim: cardLanguage.name)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(emphasized ? CampusStyle.accent : Color.secondary)
+                .accessibilityAddTraits(.isHeader)
+            if text[cardLanguage].isEmpty {
+                Text(language.wrappedValue.text("Translation needed"))
+                    .foregroundStyle(.secondary)
+            } else {
+                Text(verbatim: text[cardLanguage])
+                    .font(forDisplay && emphasized ? .system(size: displaySize, weight: .semibold) : emphasized ? .body : .subheadline)
+                    .environment(\.locale, cardLanguage.locale)
+                    .accessibilityIdentifier(emphasized ? "card-primary" : "card-secondary")
+            }
+        }
+        .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+struct TicketField: View {
+    let kind: RequirementKind
+    let text: BilingualText
+    var emptyKey = "To ask"
+    var pending = true
+    var edited = false
+    @Environment(\.cardLanguage) private var language
+
+    var body: some View {
+        let lang = language.wrappedValue
+        VStack(alignment: .leading, spacing: 6) {
+            Label(lang.text(kind.label), systemImage: kind.icon)
+                .font(.subheadline.weight(.semibold))
+                .accessibilityAddTraits(.isHeader)
+            if text.isEmpty {
+                Text(lang.text(emptyKey))
+                    .font(.subheadline)
+                    .foregroundStyle(pending ? CampusStyle.pending : Color.secondary)
+            } else {
+                LanguageLines(text: text, primary: lang)
+                if edited {
+                    Label(lang.text("Edited during review"), systemImage: "pencil")
+                        .font(.caption)
+                        .foregroundStyle(CampusStyle.accent)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
 }
 
 extension View {

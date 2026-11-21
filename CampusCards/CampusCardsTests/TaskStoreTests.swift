@@ -43,6 +43,9 @@ final class TaskStoreTests: XCTestCase {
         let correctionTurn = try store.confirmReply(correction)
         XCTAssertEqual(deadline.sourceTurnID, correctionTurn.id)
         XCTAssertEqual(deadline.text.english, "By 3:00 p.m. on Friday")
+        for requirement in items where requirement.kind != .deadline {
+            XCTAssertEqual(requirement.sourceTurnID, replyTurn.id)
+        }
         XCTAssertEqual(try container.mainContext.fetchCount(FetchDescriptor<ActionItem>()), 3)
         let turns = try container.mainContext.fetch(FetchDescriptor<ConversationTurn>())
         XCTAssertEqual(turns.count, 3)
@@ -70,6 +73,10 @@ final class TaskStoreTests: XCTestCase {
         XCTAssertEqual(lostMaterial.text.english, "Student ID")
         let enrollmentTime = try XCTUnwrap(items.first { $0.taskID == enrollment.id && $0.kind == .deadline })
         XCTAssertEqual(enrollmentTime.time?.minuteOfDay, 930)
+        XCTAssertEqual(enrollmentTime.wasEditedDuringReview, true)
+        XCTAssertEqual(enrollmentTime.text.chinese, "周五下午三点半前")
+        XCTAssertEqual(enrollmentTime.text.english, "By 3:30 p.m. on Friday")
+        XCTAssertNil(lostMaterial.wasEditedDuringReview)
         let turns = try context.fetch(FetchDescriptor<ConversationTurn>())
         XCTAssertEqual(turns.filter { $0.taskID == lost.id }.count, 2)
         XCTAssertEqual(turns.first { $0.taskID == enrollment.id }?.original, "周五下午四点前。")
@@ -113,7 +120,10 @@ final class TaskStoreTests: XCTestCase {
         var enrollmentReply = ReplyDraft(taskID: enrollment.id)
         enrollmentReply.original = "周五下午四点前。"
         enrollmentReply.fields[2].useExactTime = true
-        enrollmentReply.fields[2].time = .init(weekday: .friday, minuteOfDay: 930)
+        enrollmentReply.fields[2].time = .init(weekday: .friday, minuteOfDay: 960)
+        var reviewedTime = enrollmentReply.fields[2]
+        reviewedTime.time.minuteOfDay = 930
+        enrollmentReply.applyReviewedField(reviewedTime)
         try store.confirmReply(enrollmentReply)
 
         var pickupReply = ReplyDraft(taskID: lost.id)
