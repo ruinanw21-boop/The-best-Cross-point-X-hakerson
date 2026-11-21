@@ -3,14 +3,19 @@ import WhisperKit
 
 enum OfflineTranscriptionError: Error {
     case resourcesUnavailable
-    case recognitionFailed
+    case noRecognizedSpeech
 }
 
 actor OfflineTranscriber {
     static let shared = OfflineTranscriber()
 
+    private let diagnosticLogging: Bool
     private var engine: WhisperKit?
     private var lastDecode: Task<Void, Never>?
+
+    init(diagnosticLogging: Bool = false) {
+        self.diagnosticLogging = diagnosticLogging
+    }
 
     func transcribe(file: URL, language: CardLanguage) async throws -> String {
         // WhisperKit mutates its decoder during inference. A cancelled request can still
@@ -32,18 +37,15 @@ actor OfflineTranscriber {
     private func decode(file: URL, language: CardLanguage) async throws -> String {
         let kit = try await loadEngine()
         try Task.checkCancellation()
+        // A released reply is a complete utterance, including replies shorter than a second.
         let options = DecodingOptions(task: .transcribe, language: language == .chinese ? "zh" : "en",
-                                      detectLanguage: false, skipSpecialTokens: true, wordTimestamps: false)
-        do {
-            let results = try await kit.transcribe(audioPath: file.path, decodeOptions: options)
-            try Task.checkCancellation()
-            let text = results.map(\.text).joined(separator: " ").cleaned
-            guard !text.isEmpty else { throw OfflineTranscriptionError.recognitionFailed }
-            return text
-        } catch {
-            try Task.checkCancellation()
-            throw OfflineTranscriptionError.recognitionFailed
-        }
+                                      detectLanguage: false, skipSpecialTokens: true, withoutTimestamps: true,
+                                      windowClipTime: 0)
+        let results = try await kit.transcribe(audioPath: file.path, decodeOptions: options)
+        try Task.checkCancellation()
+        let text = results.map(\.text).joined(separator: " ").cleaned
+        guard !text.isEmpty else { throw OfflineTranscriptionError.noRecognizedSpeech }
+        return text
     }
 
     private func loadEngine() async throws -> WhisperKit {
@@ -55,7 +57,8 @@ actor OfflineTranscriber {
         let tokenizer = root.appendingPathComponent("tokenizer", isDirectory: true)
         do {
             let localTokenizer = try await AutoTokenizerWrapper.from(modelFolder: tokenizer)
-            let config = WhisperKitConfig(modelFolder: model.path, verbose: false, load: false, download: false)
+            let config = WhisperKitConfig(modelFolder: model.path, verbose: diagnosticLogging, logLevel: .debug,
+                                          load: false, download: false)
             let kit = try await WhisperKit(config)
             // v1.1.1 would otherwise fall back to the Hub after a local tokenizer error,
             // even with download: false. Injecting the local tokenizer bypasses that path.

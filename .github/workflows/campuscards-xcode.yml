@@ -38,6 +38,12 @@ jobs:
             -destination "platform=iOS Simulator,id=$simulator" \
             -parallel-testing-enabled NO -resultBundlePath "$RUNNER_TEMP/CampusCards.xcresult" \
             test
+      - name: Share the tested Xcode project with bundled speech resources
+        uses: actions/upload-artifact@v4
+        with:
+          name: CampusCards-Xcode
+          path: CampusCards/
+          retention-days: 7
       - name: Save XCTest results and transcripts
         if: always()
         uses: actions/upload-artifact@v4
