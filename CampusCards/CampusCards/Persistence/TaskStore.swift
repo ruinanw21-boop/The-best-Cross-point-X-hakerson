@@ -79,7 +79,7 @@ struct TaskStore {
 
         let taskID = draft.taskID
         let task = try self.task(withID: taskID)
-        guard !draft.original.cleaned.isEmpty else { throw Failure.invalidReply }
+        guard !draft.original.cleaned.isEmpty, !draft.hasPendingEdits else { throw Failure.invalidReply }
         if draft.originalText != nil && !draft.canConfirm { throw Failure.invalidReply }
 
         let fields = draft.confirmedFields

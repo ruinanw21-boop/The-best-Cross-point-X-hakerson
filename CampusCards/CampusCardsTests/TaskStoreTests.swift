@@ -83,6 +83,88 @@ final class TaskStoreTests: XCTestCase {
         XCTAssertFalse(revised.userEdited)
     }
 
+    func testDeadlineFormatChangesSurviveReopenAndRevertingRestoresTheOriginalFlag() throws {
+        let exact = ConfirmedTime(weekday: .friday, minuteOfDay: 960)
+        for startsExact in [true, false] {
+            var draft = ReplyDraft(taskID: UUID())
+            let index = try XCTUnwrap(draft.fields.firstIndex { $0.kind == .deadline })
+            var original = draft.fields[index]
+            if startsExact { original.confirmExactTime(exact) }
+            else { original.edit("After class", in: .english) }
+            draft.applyReviewedField(original)
+            XCTAssertFalse(draft.fields[index].userEdited)
+
+            var changed = draft.fields[index]
+            if startsExact {
+                changed.useExactTime = false
+                changed.edit("After class", in: .english)
+                changed.rememberReviewedText(in: .english)
+            } else {
+                changed.confirmExactTime(exact)
+            }
+            draft.applyReviewedField(changed)
+            draft = try JSONDecoder().decode(ReplyDraft.self, from: JSONEncoder().encode(draft))
+            XCTAssertTrue(draft.fields[index].userEdited)
+            var overridden = draft.fields[index]
+            overridden.userEdited = false
+            XCTAssertFalse(overridden.userEdited)
+
+            var reverted = draft.fields[index]
+            if startsExact { reverted.confirmExactTime(exact) }
+            else { reverted.useExactTime = false }
+            draft.applyReviewedField(reverted)
+            XCTAssertFalse(draft.fields[index].userEdited)
+        }
+    }
+
+    func testDeadlineFormatChangeAfterOpeningAnOlderCachedDraft() throws {
+        let exact = ConfirmedTime(weekday: .friday, minuteOfDay: 960)
+        var original = FieldDraft(kind: .deadline)
+        original.useExactTime = true
+        original.time = exact
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(original)) as? [String: Any])
+        for hasBothLegacyBaselines in [false, true] {
+            var stored = json
+            if hasBothLegacyBaselines {
+                stored["reviewTimeBaseline"] = stored["time"]
+                stored["reviewTextBaseline"] = ["english": "After class", "chinese": ""]
+            }
+            var draft = ReplyDraft(taskID: UUID())
+            let index = try XCTUnwrap(draft.fields.firstIndex { $0.kind == .deadline })
+            draft.fields[index] = try JSONDecoder().decode(FieldDraft.self, from: JSONSerialization.data(withJSONObject: stored))
+            var text = draft.fields[index]
+            text.useExactTime = false
+            text.edit("After class", in: .english)
+            draft.applyReviewedField(text)
+            XCTAssertTrue(draft.fields[index].userEdited)
+            var reverted = draft.fields[index]
+            reverted.confirmExactTime(exact)
+            draft.applyReviewedField(reverted)
+            XCTAssertFalse(draft.fields[index].userEdited)
+        }
+    }
+
+    func testFirstCorrectionCanReplaceAnExactDeadlineWithTextWithoutAnEditFlag() {
+        let exact = ConfirmedTime(weekday: .friday, minuteOfDay: 960)
+        var older = FieldDraft(kind: .deadline)
+        older.useExactTime = true
+        older.time = exact
+        var correction = ReplyDraft(taskID: UUID(), correctingActionID: UUID(), changes: [older])
+        var unchanged = correction.fields[0]
+        unchanged.confirmExactTime(exact)
+        correction.applyReviewedField(unchanged)
+
+        var replacement = correction.fields[0]
+        replacement.useExactTime = false
+        replacement.edit("After class", in: .english)
+        correction.applyReviewedField(replacement)
+        XCTAssertFalse(correction.fields[0].userEdited)
+        var rechecked = correction.fields[0]
+        rechecked.confirmExactTime(exact)
+        correction.applyReviewedField(rechecked)
+        XCTAssertTrue(correction.fields[0].userEdited)
+    }
+
     func testDiskRoundTripRetainsTwoTasksAndMaterialProgress() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -110,6 +192,21 @@ final class TaskStoreTests: XCTestCase {
         try TaskStore(context: context).setComplete(false, for: lost)
         XCTAssertFalse(lost.isComplete)
         XCTAssertTrue(lostMaterial.isChecked)
+    }
+
+    func testPendingEditorsCannotFinalizeAnUnreviewedDraft() throws {
+        let container = try makeContainer()
+        let store = TaskStore(context: container.mainContext)
+        let task = try create(.enrollment, in: store)
+        var draft = ReplyDraft(taskID: task.id)
+        draft.original = "Bring your passport"
+        draft.pendingManualTranslation = "请带护照"
+        XCTAssertThrowsError(try store.confirmReply(draft))
+
+        draft.pendingManualTranslation = nil
+        draft.pendingField = FieldDraft(kind: .material)
+        XCTAssertThrowsError(try store.confirmReply(draft))
+        XCTAssertTrue(try store.loadTask(task.id).turns.isEmpty)
     }
 
     func testEditingOneLanguageDoesNotSaveAnOutdatedTranslation() {

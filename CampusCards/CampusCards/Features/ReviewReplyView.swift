@@ -23,8 +23,6 @@ struct ReviewReplyView: View {
     @FocusState private var focusedField: EditorField?
     @State private var detailsExpanded: Bool
     @State private var followUp: CardContent?
-    @State private var editingField: FieldDraft?
-    @State private var manualTranslation: ManualTranslationEditor?
     @State private var saveError = false
     @State private var isSaving = false
     @State private var confirmCancel = false
@@ -55,9 +53,10 @@ struct ReviewReplyView: View {
 
     private var lang: CardLanguage { language.wrappedValue }
 
-    private var hasDraftContent: Bool {
-        draft.recordingRef != nil || !draft.original.cleaned.isEmpty || !draft.speaker.cleaned.isEmpty
-            || !draft.confirmedFields.isEmpty
+    private var showingManualTranslation: Binding<Bool> {
+        Binding(get: { draft.pendingManualTranslation != nil }, set: { presented in
+            if !presented { draft.pendingManualTranslation = nil }
+        })
     }
 
     private var missing: [RequirementKind] {
@@ -89,7 +88,7 @@ struct ReviewReplyView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(lang.text("Cancel")) {
-                        if hasDraftContent {
+                        if draft.hasDraftContent {
                             confirmCancel = true
                         } else {
                             close(.discard)
@@ -120,14 +119,16 @@ struct ReviewReplyView: View {
             .sheet(item: $followUp) { content in
                 ShowCardView(card: content)
             }
-            .sheet(item: $editingField) { field in
+            .sheet(item: $draft.pendingField) { field in
                 requirementEditor(for: field)
             }
-            .sheet(item: $manualTranslation) { editor in
-                ManualTranslationSheet(editor: editor) { text in
+            .sheet(isPresented: showingManualTranslation) {
+                ManualTranslationSheet(text: Binding(
+                    get: { draft.pendingManualTranslation ?? "" },
+                    set: { if draft.pendingManualTranslation != nil { draft.pendingManualTranslation = $0 } }
+                ), target: draft.language.other) { text in
                     stopWork()
                     draft.acceptManualTranslation(text)
-                    manualTranslation = nil
                 }
             }
             .sheet(item: $addressEditor) { editor in
@@ -140,7 +141,7 @@ struct ReviewReplyView: View {
                 .presentationDetents([.medium, .large])
             }
         }
-        .interactiveDismissDisabled(hasDraftContent || press != nil || draft.kind == .correction)
+        .interactiveDismissDisabled(draft.hasDraftContent || press != nil || draft.kind == .correction)
         .onAppear {
             closing = false
             restoreDraft()
@@ -149,16 +150,24 @@ struct ReviewReplyView: View {
             if !closing { ReplyDraftCache().save(current) }
         }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .background, press != nil {
-                stopWork()
-                recognitionMessage = ReplyCaptureError.interrupted.messageKey
+            if phase == .background, !closing {
+                if press != nil {
+                    stopWork()
+                    recognitionMessage = ReplyCaptureError.interrupted.messageKey
+                }
+                if draft.hasDraftContent { ReplyDraftCache().save(draft) }
             }
         }
         .onDisappear {
             if !closing {
+                // A sheet can cover the whole editor in compact height.
+                if draft.hasPendingEdits {
+                    ReplyDraftCache().save(draft)
+                    return
+                }
                 closing = true
                 stopWork()
-                if hasDraftContent {
+                if draft.hasDraftContent {
                     ReplyDraftCache().save(draft)
                 } else {
                     ReplyDraftCache().remove(draft)
@@ -352,7 +361,7 @@ struct ReviewReplyView: View {
             Button(lang.text("Enter translation manually")) {
                 focusedField = nil
                 stopWork()
-                manualTranslation = .init(text: draft.translation, target: draft.language.other)
+                draft.pendingManualTranslation = draft.translation
             }
             .buttonStyle(DeskButtonStyle(tone: .soft))
             .disabled(draft.original.cleaned.isEmpty || press != nil || draft.isRecognizing)
@@ -417,7 +426,7 @@ struct ReviewReplyView: View {
                                     emptyKey: needsAnswer ? "To ask" : "Not added in this reply",
                                     pending: needsAnswer, edited: field.userEdited)
                         Button(lang.text(field.effectiveText.isEmpty ? "Add" : "Edit")) {
-                            editingField = field
+                            draft.pendingField = field
                         }
                         .frame(minWidth: 44, minHeight: 44)
                         .accessibilityLabel(Text(verbatim: "\(lang.text(field.kind.label)): \(lang.text(field.effectiveText.isEmpty ? "Add" : "Edit"))"))
@@ -428,7 +437,7 @@ struct ReviewReplyView: View {
         }
         if draft.kind == .requirements {
             Button {
-                editingField = FieldDraft(kind: .material)
+                draft.pendingField = FieldDraft(kind: .material)
             } label: {
                 Label(lang.text("Add another material"), systemImage: "plus")
             }
@@ -450,13 +459,17 @@ struct ReviewReplyView: View {
         let exists = draft.fields.contains { $0.id == field.id }
         let removable = exists && field.kind == .material && draft.kind == .requirements
             && draft.fields.filter { $0.kind == .material }.count > 1
-        return RequirementEditorSheet(field: field, removable: removable, isCorrection: draft.kind == .correction) { updated in
+        // The sheet can still render during dismissal. Ignore late focus updates to a closed editor.
+        let current = Binding(get: { draft.pendingField ?? field }, set: { updated in
+            if draft.pendingField?.id == field.id { draft.pendingField = updated }
+        })
+        return RequirementEditorSheet(field: current, removable: removable, isCorrection: draft.kind == .correction) { updated in
             if let updated {
                 draft.applyReviewedField(updated)
             } else {
                 draft.fields.removeAll { $0.id == field.id }
+                draft.pendingField = nil
             }
-            editingField = nil
         }
     }
 
@@ -633,31 +646,19 @@ struct ReviewReplyView: View {
     }
 }
 
-private struct ManualTranslationEditor: Identifiable {
-    let id = UUID()
-    let text: String
-    let target: CardLanguage
-}
-
 private struct ManualTranslationSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.cardLanguage) private var language
-    @State private var text: String
-    let editor: ManualTranslationEditor
+    @Binding var text: String
+    let target: CardLanguage
     let onApply: (String) -> Void
-
-    init(editor: ManualTranslationEditor, onApply: @escaping (String) -> Void) {
-        self.editor = editor
-        self.onApply = onApply
-        _text = State(initialValue: editor.text)
-    }
 
     var body: some View {
         let lang = language.wrappedValue
         NavigationStack {
             CampusPage {
                 VStack(alignment: .leading, spacing: 12) {
-                    DeskHeading(title: editor.target.name)
+                    DeskHeading(title: target.name)
                     TextField(lang.text("Edit translation"), text: $text, axis: .vertical)
                         .lineLimit(3...8)
                         .deskInput()
@@ -682,17 +683,10 @@ private struct ManualTranslationSheet: View {
 private struct RequirementEditorSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.cardLanguage) private var language
-    @State private var field: FieldDraft
+    @Binding var field: FieldDraft
     let removable: Bool
     let isCorrection: Bool
     let onApply: (FieldDraft?) -> Void
-
-    init(field: FieldDraft, removable: Bool, isCorrection: Bool, onApply: @escaping (FieldDraft?) -> Void) {
-        _field = State(initialValue: field)
-        self.removable = removable
-        self.isCorrection = isCorrection
-        self.onApply = onApply
-    }
 
     var body: some View {
         let lang = language.wrappedValue
