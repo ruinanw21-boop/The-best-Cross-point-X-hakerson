@@ -16,6 +16,7 @@ On macOS the same command also compiles the bundled encoder and decoder source p
 4. Relaunch the app and open the task. The checklist should say **By 3:30 p.m. on Friday** and **周五下午三点半前**. Open **Conversation history** to verify that the original reply still says **四点**.
 5. Create **Collect lost property**. Save a requirements reply with only the library reception location. Open the **What do I need to bring?** card and save a second reply with **Student ID / 学生证**. Check the item and mark the task complete. Return to **My tasks**, switch to **Completed** and reopen it.
 6. Try the globe menu mid-reply. The current draft should stay open and the selected interface language should persist across launches.
+7. For a custom task, enter the question in one language and tap **Translate to Chinese** or **Translate to English**. The result fills the other question field. Review it before showing the card. You can also fill both fields yourself.
 
 | Field | English | 简体中文 |
 | --- | --- | --- |
@@ -37,6 +38,8 @@ The app keeps pending replies and confirmed history on the device. Requesting a 
 4. 重启 App 后打开该事项，「清单」的中英文应显示下午三点半。在「交流记录」核对原话仍是「四点」。
 5. 新建「领取失物」，先确认图书馆前台，再出示追问卡并补录学生证。勾选学生证并点「办结」，回首页切到「已办结」，打开事项后点「重新办理」。
 6. 录到一半时用地球图标切换界面语言，继续编辑原草稿。重启后检查语言偏好。
+
+7. 新建自定义事项时，先填一种语言的问句，再点「翻译成中文」或「翻译成英文」。译文填进另一栏，出示前可以核对修改。也可以直接手填双语问句。
 
 演示里的校园办事要求为虚构示例。
 
