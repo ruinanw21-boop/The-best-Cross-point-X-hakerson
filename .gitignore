@@ -67,3 +67,10 @@ fastlane/test_output
 /CampusCards/CampusCards/Resources/Simulator/.speech-*/
 /CampusCards/CampusCards/Resources/Simulator/OfflineSpeech/*
 !/CampusCards/CampusCards/Resources/Simulator/OfflineSpeech/.gitkeep
+
+# Local Python environment and credentials
+.venv/
+__pycache__/
+*.py[cod]
+.env
+.env.*
