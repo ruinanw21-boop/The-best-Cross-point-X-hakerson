@@ -60,3 +60,7 @@ fastlane/report.xml
 fastlane/Preview.html
 fastlane/screenshots/**/*.png
 fastlane/test_output
+
+# Prepared by CampusCards/Scripts/prepare_offline_speech.py
+/CampusCards/CampusCards/Resources/OfflineSpeech/openai_whisper-base/
+/CampusCards/CampusCards/Resources/OfflineSpeech/tokenizer/

@@ -4,6 +4,8 @@
 
 Open `CampusCards.xcodeproj` in Xcode, select the shared **CampusCards** scheme and an iPhone simulator, and press **⌘R**. The deployment target is iOS 18.0. To run on a physical iPhone, set your development team in **Signing & Capabilities** and use a bundle identifier available to that team.
 
+Before building for offline speech, run `python3 CampusCards/Scripts/prepare_offline_speech.py` from the repository root. This verifies the multilingual base model and tokenizer and places them in the app's bundle resources. Hold either microphone under **Record reply**, release to review, and tap **Play recording** to listen.
+
 ### Demo walkthrough
 
 1. On the English home screen, choose **New task → Submit enrollment documents → Create task**. Open **Show card** and try **Swap card languages**.
@@ -36,6 +38,24 @@ The app keeps pending replies and confirmed history on the device. Requesting a 
 
 演示里的校园办事要求为虚构示例。
 
+### 03 离线录音、转写和回听
+
+在 Mac 上从仓库根目录执行以下命令，再用 Xcode 构建 `CampusCards` App target。第一条命令下载任务指定的多语模型和 tokenizer，第二条命令可在断网时逐文件校验 SHA-256。Xcode 会将准备好的 `OfflineSpeech` 整个目录复制进 App。安装后首次转写直接从 App 包读取资源。更换 Mac 或重新克隆时需重新准备。
+
+```sh
+python3 CampusCards/Scripts/prepare_offline_speech.py
+python3 CampusCards/Scripts/prepare_offline_speech.py --verify-only
+```
+
+模型使用 [Argmax 的 openai_whisper-base](https://huggingface.co/argmaxinc/whisperkit-coreml/tree/0f63a7800b00dd0226abd051b906c246e1907482/openai_whisper-base)，分词资源来自 [OpenAI 的 whisper-base](https://huggingface.co/openai/whisper-base/tree/e37978b90ca9030d5170a5c07aadb050351a65bb)。App target 固定使用 [WhisperKit v1.1.1](https://github.com/argmaxinc/argmax-oss-swift/tree/v1.1.1)。如果构建时漏装资源，核对页会显示提示，仍可回听和手动键入。
+
+**在 iPhone 上分两步验收**
+
+1. 安装已预置资源的 App，开启飞行模式并关闭 Wi-Fi，完全退出再冷启动。在事项 A 的「记录答复」按住中文麦克风，说“请到一楼服务台”。松开后，在核对页回听、改一个字，返回并保留草稿。另建事项 B，按住英文麦克风说 “Which desk should I go to?”，同样回听和核对。分别打开两张草稿检查原音。首次出现麦克风授权弹窗时，授权后再按住录音。也可在系统设置中关闭麦克风权限，检查已有文字仍能编辑并进入核对页。
+2. 恢复 Wi-Fi，打开其中一张草稿，用下方 05 的方法配置 Windows 翻译服务。发起翻译、核对并「确认并保存」，完全退出 App 再打开。在原事项的「交流记录」回听，确认播放的是对应语句，也能查到修改后的原文和译文。记录设备型号、iOS 版本及两轮实际转写。
+
+`TaskDetailView → ReviewReplyView → ReplyCapture.recognize` 使用 PR #9 的 `ReplyRecognizer`。按下麦克风固定事项、草稿、版本和源语言，松开时交付录音。编辑或切换草稿后，旧转写返回时不会写入。每轮创建独立的 `Application Support/Recordings/<UUID>.wav` 文件。草稿及历史仅存相对路径，例如 `Recordings/7F9C309A-2447-4FAC-86FF-F89B226008B5.wav`。键入的答复可以没有录音。
+
 ### 05 真机联调
 
 1. 在 Windows 的 04 工程目录启动已验收的翻译服务，保持窗口打开。使用原先只允许测试手机访问的入口时，在 PowerShell 运行以下命令。两台设备连接同一 Wi-Fi，Windows 的入站规则需允许这台手机访问 TCP 8000。
@@ -60,13 +80,13 @@ The app keeps pending replies and confirmed history on the device. Requesting a 
 | HTTP 请求与服务错误 | `TranslationClientTests` 拦截实际 URLSession 请求，检查两种方向、三个 JSON 字段、断网以及 400、502、504 的处理；乱序用例拦住 A、B 两个 HTTP 请求，先放行 B，再放行 A。 |
 | 乱序及切换草稿 | `ReplyWorkflowTests` 先发 16:00 的 A，再发 15:30 的 B，先完成 B，随后投递 A 的成功或错误；也覆盖手改译文、换事项、改语言和转写中键入。 |
 | 草稿恢复、正式保存 | 同一套测试恢复未完成的草稿，并在支持 SwiftData 的测试目标中模拟保存失败、以相同草稿 ID 重试和重复确认，重新打开磁盘库检查两轮答复。 |
-| 本地转写 | 03 接入时，在 `TaskDetailView` 创建 `ReviewReplyView` 处传入 `recognize:`。识别器接收 `ReplyRequestToken` 和答复语言，返回含原 token、语言、原始转写文本及录音相对路径的 `ReplyTranscription`。核对页会丢弃用户改字或离开后才回来的结果。当前测试注入固定中文转写，真麦克风由 03 接入后验收。 |
+| 本地转写与回听 | `OfflineSpeechTests` 使用任务单两句中英文合成语音和 App 包内的真实模型。`ReplyAudioTests` 覆盖逐轮文件、重新打开后解码，以及权限回调与松手的先后顺序。 |
 
-**2026-11-21 验证结果**
+**任务 05 当时的验证结果（2026-11-21）**
 
 | 环境 | 实际结果 |
 | --- | --- |
 | Windows / WSL，Swift 6.4.3 | 5 项草稿 XCTest、6 项 HTTP XCTest 全部通过。所有 App 与测试 Swift 源文件通过语法解析。Linux 测试使用去除 SwiftData 注解的模型副本。 |
 | Swift 客户端 → 04 Flask/Waitress，固定翻译器 | 经回环 HTTP 验证英译中、中译英和 502、504 的错误映射。 |
 | iPhone Safari → 04 Windows 服务 → 智谱 | 此前两种方向均返回 HTTP 200，已在 Safari 核对。 |
-| iOS 原生 App | 待用 Xcode 构建、运行含 SwiftData 的测试，并在 iPhone 上验证本地网络授权、查看两轮译文及重开历史。真麦克风输入还依赖任务 03。 |
+| iOS 原生 App | 任务 05 交付时，原生 App 的 Xcode 测试、本地网络授权和真机历史回听尚待验收。 |

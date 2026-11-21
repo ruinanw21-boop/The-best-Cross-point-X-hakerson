@@ -25,6 +25,13 @@
 		D052EDC356CD15A754E5DD02 /* ActionItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74AF8620C323A06A9C99ED2B /* ActionItem.swift */; };
 		D0CB4214EA0311A43B877531 /* ConversationTurn.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD3E8F66CCCFA75A798C97D0 /* ConversationTurn.swift */; };
 		F1C1DAAFC70938D6F47894AE /* TaskDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83FD8B51CECB20CF95620DDC /* TaskDetailView.swift */; };
+		42A8958A47EB3B53F66225D8 /* ReplyAudio.swift in Sources */ = {isa = PBXBuildFile; fileRef = 849EB0FAE52CE40811A9816C /* ReplyAudio.swift */; };
+		C889536ACC4D1BFF9ECF36C3 /* OfflineTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECF12B9E025B0578BE043858 /* OfflineTranscriber.swift */; };
+		7915226653A39D6971E3581E /* ReplyAudioTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13093E69C18973991CA16DA6 /* ReplyAudioTests.swift */; };
+		BC6AE6BAAF4185180FDC74D8 /* OfflineSpeechTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECD50F2AE161E98AEB260EA2 /* OfflineSpeechTests.swift */; };
+		58A28A159739EA24AA860554 /* SpeechSamples in Resources */ = {isa = PBXBuildFile; fileRef = 4631E41604449693FA4C07AC /* SpeechSamples */; };
+		C8D0217CEB35146224F9F1B8 /* OfflineSpeech in Resources */ = {isa = PBXBuildFile; fileRef = 14AFFD70D81353C685846AE4 /* OfflineSpeech */; };
+		164028F3B7B6C08B82F9060D /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = 05B15AA87C1E0138CEB2370A /* WhisperKit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -59,6 +66,12 @@
 		3648BDDDB5917E957008B04A /* ReplyWorkflow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReplyWorkflow.swift; sourceTree = "<group>"; };
 		EFB9C31B236FE3B75E74F6F4 /* ShowCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShowCardView.swift; sourceTree = "<group>"; };
 		F739566ED5280322FF98A798 /* CampusCardsTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CampusCardsTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		849EB0FAE52CE40811A9816C /* ReplyAudio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReplyAudio.swift; sourceTree = "<group>"; };
+		ECF12B9E025B0578BE043858 /* OfflineTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineTranscriber.swift; sourceTree = "<group>"; };
+		13093E69C18973991CA16DA6 /* ReplyAudioTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReplyAudioTests.swift; sourceTree = "<group>"; };
+		ECD50F2AE161E98AEB260EA2 /* OfflineSpeechTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineSpeechTests.swift; sourceTree = "<group>"; };
+		4631E41604449693FA4C07AC /* SpeechSamples */ = {isa = PBXFileReference; lastKnownFileType = folder; path = SpeechSamples; sourceTree = "<group>"; };
+		14AFFD70D81353C685846AE4 /* OfflineSpeech */ = {isa = PBXFileReference; lastKnownFileType = folder; path = OfflineSpeech; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -66,6 +79,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				164028F3B7B6C08B82F9060D /* WhisperKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -100,6 +114,8 @@
 		325F18C84696A56473AA76E7 /* Features */ = {
 			isa = PBXGroup;
 			children = (
+				849EB0FAE52CE40811A9816C /* ReplyAudio.swift */,
+				ECF12B9E025B0578BE043858 /* OfflineTranscriber.swift */,
 				62314732B8BA2A6D7A9CC109 /* CampusStyle.swift */,
 				B35C6340F506EC7D4DCB34CD /* PrepareCardView.swift */,
 				E8D29C7F6D6FE00E7E8EDB4A /* ReplyDraft.swift */,
@@ -124,6 +140,7 @@
 		665661B8EDE5BFEAF440E49A /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				14AFFD70D81353C685846AE4 /* OfflineSpeech */,
 				B506C335A68CF9BCE316091A /* Localizable.xcstrings */,
 				88D4561AF51FA2B5540B8BC8 /* Info.plist */,
 			);
@@ -133,6 +150,9 @@
 		7D3C84C3FC5243C54956DBDB /* CampusCardsTests */ = {
 			isa = PBXGroup;
 			children = (
+				13093E69C18973991CA16DA6 /* ReplyAudioTests.swift */,
+				ECD50F2AE161E98AEB260EA2 /* OfflineSpeechTests.swift */,
+				4631E41604449693FA4C07AC /* SpeechSamples */,
 				35D537F2BDF04959350B5616 /* TaskStoreTests.swift */,
 				BE799D1E1512F229DED289C0 /* TranslationClientTests.swift */,
 				7448C5C258270B533411666F /* ReplyWorkflowTests.swift */,
@@ -196,6 +216,9 @@
 			dependencies = (
 			);
 			name = CampusCards;
+			packageProductDependencies = (
+				05B15AA87C1E0138CEB2370A /* WhisperKit */,
+			);
 			productName = CampusCards;
 			productReference = 681C948D238C526E9E3424E0 /* CampusCards.app */;
 			productType = "com.apple.product-type.application";
@@ -223,6 +246,9 @@
 				"zh-Hans",
 			);
 			mainGroup = 0D6E4079E36703EBD37C0072;
+			packageReferences = (
+				56164AB4EE77FDFB66A39796 /* argmax-oss-swift */,
+			);
 			productRefGroup = 0A3E27B8CA818264D75C8D81 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -238,6 +264,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				58A28A159739EA24AA860554 /* SpeechSamples in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -245,6 +272,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C8D0217CEB35146224F9F1B8 /* OfflineSpeech in Resources */,
 				AE774FC2D40A1A81396926B2 /* Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -256,6 +284,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				42A8958A47EB3B53F66225D8 /* ReplyAudio.swift in Sources */,
+				C889536ACC4D1BFF9ECF36C3 /* OfflineTranscriber.swift in Sources */,
 				40750191D32FE0B3E051690C /* CampusCardsApp.swift in Sources */,
 				88E3C7AE0597ACD1D98CC08D /* CampusStyle.swift in Sources */,
 				96A5AA7CD0776AF986B5662A /* PrepareCardView.swift in Sources */,
@@ -277,6 +307,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7915226653A39D6971E3581E /* ReplyAudioTests.swift in Sources */,
+				BC6AE6BAAF4185180FDC74D8 /* OfflineSpeechTests.swift in Sources */,
 				41EE6B06E69ECE8B299EF957 /* TaskStoreTests.swift in Sources */,
 				BB3A45AB47254CDF1875905D /* TranslationClientTests.swift in Sources */,
 				0FB65C6E1951E8902CB60FDF /* ReplyWorkflowTests.swift in Sources */,
@@ -292,6 +324,25 @@
 			targetProxy = 00B65C7FF4DF955E2B77DCDC /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		56164AB4EE77FDFB66A39796 /* argmax-oss-swift */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/argmaxinc/argmax-oss-swift.git";
+			requirement = {
+				kind = exactVersion;
+				version = 1.1.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		05B15AA87C1E0138CEB2370A /* WhisperKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 56164AB4EE77FDFB66A39796 /* argmax-oss-swift */;
+			productName = WhisperKit;
+		};
+/* End XCSwiftPackageProductDependency section */
 
 /* Begin XCBuildConfiguration section */
 		07CA1E69F6068DEA30A4DA6B /* Release */ = {

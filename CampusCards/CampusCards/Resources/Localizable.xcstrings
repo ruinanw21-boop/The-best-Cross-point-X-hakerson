@@ -265,6 +265,17 @@
         }
       }
     },
+    "Couldn’t play this recording.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法播放这轮录音。"
+          }
+        }
+      }
+    },
     "Couldn’t reach the service. Check Wi-Fi and the service address, then retry.": {
       "extractionState": "manual",
       "localizations": {
@@ -272,6 +283,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "无法连接翻译服务，请检查 Wi-Fi 和服务地址后重试。"
+          }
+        }
+      }
+    },
+    "Couldn’t record audio. Try again or type the reply.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "录音失败。请重试，或键入答复。"
           }
         }
       }
@@ -349,6 +371,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "放弃这条答复？"
+          }
+        }
+      }
+    },
+    "Double-tap to start or stop recording.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "轻点两下开始或停止录音。"
           }
         }
       }
@@ -441,6 +474,28 @@
         }
       }
     },
+    "Hold to speak Chinese": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按住说中文"
+          }
+        }
+      }
+    },
+    "Hold to speak English": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按住说英文"
+          }
+        }
+      }
+    },
     "In progress": {
       "extractionState": "manual",
       "localizations": {
@@ -507,6 +562,28 @@
         }
       }
     },
+    "Microphone access is off. Allow it in Settings or type the reply.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未获麦克风权限。你可以在设置中允许访问，或键入答复。"
+          }
+        }
+      }
+    },
+    "Microphone access is ready. Hold the microphone again to record.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "麦克风已获授权。请再次按住麦克风说话。"
+          }
+        }
+      }
+    },
     "Monday": {
       "extractionState": "manual",
       "localizations": {
@@ -540,6 +617,17 @@
         }
       }
     },
+    "No audio was recorded. Hold the microphone while speaking.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有录到声音。说话时请按住麦克风。"
+          }
+        }
+      }
+    },
     "No weekday": {
       "extractionState": "manual",
       "localizations": {
@@ -562,6 +650,17 @@
         }
       }
     },
+    "Offline speech resources are unavailable. You can type the reply.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "本地语音模型或分词资源不可用。你仍可键入答复。"
+          }
+        }
+      }
+    },
     "Original reply": {
       "extractionState": "manual",
       "localizations": {
@@ -580,6 +679,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "最初原话"
+          }
+        }
+      }
+    },
+    "Play recording": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "回听本轮录音"
           }
         }
       }
@@ -646,6 +756,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "记录答复"
+          }
+        }
+      }
+    },
+    "Recording was interrupted. Hold the microphone again or type the reply.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "录音中断。请重新按住麦克风说话，或键入答复。"
+          }
+        }
+      }
+    },
+    "Recording… Release to review.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在录音，松开后核对。"
           }
         }
       }
@@ -866,6 +998,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "出示清单"
+          }
+        }
+      }
+    },
+    "Stop playback": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "停止回听"
           }
         }
       }

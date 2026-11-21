@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>按住麦克风录下本轮答复，供本机转写和回听。Record this reply for on-device transcription and playback.</string>
     <key>NSLocalNetworkUsageDescription</key>
     <string>连接你指定的局域网翻译服务，发送核对后的原文并取回译文。</string>
     <key>NSAppTransportSecurity</key>

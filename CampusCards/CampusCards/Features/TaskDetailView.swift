@@ -232,6 +232,10 @@ struct TaskDetailView: View {
                     .foregroundStyle(.secondary)
                     .environment(\.locale, turn.originalLanguage.other.locale)
             }
+
+            if let reference = turn.recordingRef {
+                RecordingPlaybackButton(recordingRef: reference)
+            }
         }
         .padding(.vertical, 5)
     }
