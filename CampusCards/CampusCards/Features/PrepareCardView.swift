@@ -4,12 +4,16 @@ import SwiftUI
 struct PrepareCardView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.cardLanguage) private var language
+    @AppStorage("translationBaseAddress") private var serviceAddress = ""
     @State private var scenario: TaskScenario = .enrollment
     @State private var fields = TaskScenario.enrollment.defaultFields
     @State private var customTitle = BilingualText()
     @State private var customQuestion = BilingualText()
     @State private var saveError = false
     @State private var presentedCard: CardContent?
+    @State private var showTranslationAddress = false
+    @State private var translationTask: Task<Void, Never>?
+    @State private var translationError: TranslationServiceError?
     let onCreate: (CampusTask) -> Void
 
     private var lang: CardLanguage { language.wrappedValue }
@@ -17,6 +21,11 @@ struct PrepareCardView: View {
     private var orderedFields: [RequirementKind] { RequirementKind.allCases.filter(fields.contains) }
     private var question: BilingualText {
         scenario == .custom ? customQuestion.cleaned : scenario.question(asking: orderedFields)
+    }
+
+    private var questionSource: CardLanguage? {
+        guard scenario == .custom, question.isPartial else { return nil }
+        return question.english.isEmpty ? .chinese : .english
     }
 
     var body: some View {
@@ -48,6 +57,17 @@ struct PrepareCardView: View {
         .sheet(item: $presentedCard) { card in
             ShowCardView(card: card)
         }
+        .sheet(isPresented: $showTranslationAddress) {
+            TranslationAddressView(address: serviceAddress, translateOnSave: true) { address in
+                serviceAddress = address
+                showTranslationAddress = false
+                translateQuestion(using: address)
+            }
+            .presentationDetents([.medium, .large])
+        }
+        .onChange(of: customQuestion) { _, _ in cancelTranslation() }
+        .onChange(of: scenario) { _, _ in cancelTranslation() }
+        .onDisappear { cancelTranslation() }
         .modifier(SaveErrorAlert(presented: $saveError))
     }
 
@@ -96,7 +116,62 @@ struct PrepareCardView: View {
                 .lineLimit(2...5).deskInput()
             TextField(lang.text("Question in Chinese"), text: $customQuestion.chinese, axis: .vertical)
                 .lineLimit(2...5).deskInput()
+            if translationTask != nil {
+                ProgressView(lang.text("Translating…"))
+            } else if let source = questionSource {
+                Button {
+                    requestQuestionTranslation()
+                } label: {
+                    let direction = source == .english ? "Translate to Chinese" : "Translate to English"
+                    Label(lang.text(translationError == nil ? direction : "Retry translation"),
+                          systemImage: "translate")
+                }
+                .buttonStyle(DeskButtonStyle(tone: .soft))
+                .accessibilityIdentifier("translate-question")
+            }
+            if let translationError {
+                Text(lang.text(translationError.messageKey))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                Button(lang.text("Translation service")) {
+                    showTranslationAddress = true
+                }
+                .frame(minHeight: 44)
+            }
         }
+    }
+
+    private func requestQuestionTranslation() {
+        guard (try? TranslationClient(baseAddress: serviceAddress).endpoint()) != nil else {
+            showTranslationAddress = true
+            return
+        }
+        translateQuestion(using: serviceAddress)
+    }
+
+    private func translateQuestion(using address: String) {
+        guard let source = questionSource, translationTask == nil else { return }
+        let original = customQuestion
+        translationError = nil
+        translationTask = Task { @MainActor in
+            do {
+                let value = try await TranslationClient(baseAddress: address)
+                    .translate(text: original[source].cleaned, source: source)
+                guard !Task.isCancelled, scenario == .custom, customQuestion == original else { return }
+                translationTask = nil
+                customQuestion[source.other] = value
+            } catch {
+                guard !Task.isCancelled, scenario == .custom, customQuestion == original else { return }
+                translationTask = nil
+                translationError = error as? TranslationServiceError ?? .unavailable
+            }
+        }
+    }
+
+    private func cancelTranslation() {
+        translationTask?.cancel()
+        translationTask = nil
+        translationError = nil
     }
 
     private var questions: some View {

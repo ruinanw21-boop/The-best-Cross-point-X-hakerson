@@ -327,7 +327,7 @@ struct ReviewReplyView: View {
             }
 
             if let error = draft.translationError {
-                Label(lang.text(translationMessage(error)), systemImage: "exclamationmark.circle")
+                Label(lang.text(error.messageKey), systemImage: "exclamationmark.circle")
                     .font(.subheadline)
                     .foregroundStyle(CampusStyle.muted)
                     .accessibilityIdentifier("translation-error")
@@ -491,17 +491,6 @@ struct ReviewReplyView: View {
             return "Retry translation"
         }
         return draft.language == .chinese ? "Translate to English" : "Translate to Chinese"
-    }
-
-    private func translationMessage(_ error: TranslationServiceError) -> String {
-        switch error {
-        case .invalidAddress: "Enter a service address with http:// or https:// and a port if needed."
-        case .invalidRequest: "Check the source text and language, then translate again."
-        case .unavailable: "The translation service is unavailable. Try again."
-        case .timeout: "The translation service timed out. Try again."
-        case .offline: "Couldn’t reach the service. Check Wi-Fi and the service address, then retry."
-        case .invalidResponse: "The service returned an unreadable response. Check the address and retry."
-        }
     }
 
     private func translate(using address: String) {
@@ -713,7 +702,7 @@ private struct TranslationAddressEditor: Identifiable {
     let translateOnSave: Bool
 }
 
-private struct TranslationAddressView: View {
+struct TranslationAddressView: View {
     @Environment(\.cardLanguage) private var language
     @Environment(\.dismiss) private var dismiss
     @State var address: String

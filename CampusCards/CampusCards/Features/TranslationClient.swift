@@ -10,6 +10,17 @@ enum TranslationServiceError: Error, Equatable {
     case timeout
     case offline
     case invalidResponse
+
+    var messageKey: String {
+        switch self {
+        case .invalidAddress: "Enter a service address with http:// or https:// and a port if needed."
+        case .invalidRequest: "Check the source text and language, then translate again."
+        case .unavailable: "The translation service is unavailable. Try again."
+        case .timeout: "The translation service timed out. Try again."
+        case .offline: "Couldn’t reach the service. Check Wi-Fi and the service address, then retry."
+        case .invalidResponse: "The service returned an unreadable response. Check the address and retry."
+        }
+    }
 }
 
 struct TranslationClient {
