@@ -75,7 +75,7 @@ struct TaskReadback: Codable {
             let actionID = actionIDForItem(item)
             let field = Field(
                 id: item.id, field: item.kind, value: item.text, time: item.time,
-                isChecked: item.isChecked, sourceTurnID: item.sourceTurnID, userEdited: item.userEdited
+                isChecked: item.isChecked, sourceTurnID: item.sourceTurnID, userEdited: item.reviewedAsEdited
             )
             if let index = indices[actionID] {
                 groups[index].fields.append(field)

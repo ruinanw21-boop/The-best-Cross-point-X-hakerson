@@ -30,6 +30,8 @@ final class ReplyWorkflowTests: XCTestCase {
         XCTAssertEqual(legacy.original, draft.original)
         XCTAssertFalse(legacy.hasTranslatedCurrentSource)
         XCTAssertFalse(legacy.canConfirm)
+        XCTAssertNil(legacy.pendingField)
+        XCTAssertNil(legacy.pendingManualTranslation)
 
         draft.original = "周五 15:30 前"
         draft.editTranslation("By 4 p.m. on Friday")
@@ -41,6 +43,162 @@ final class ReplyWorkflowTests: XCTestCase {
         draft.editTranslation("不能在更改方向之后沿用上一个译文")
         XCTAssertTrue(draft.translation.isEmpty)
         XCTAssertFalse(draft.canConfirm)
+    }
+
+    func testManualTranslationRequiresExplicitReviewAndSurvivesReopening() throws {
+        var draft = ReplyDraft(taskID: UUID())
+        draft.original = "周五 16:00 前"
+        XCTAssertFalse(draft.acceptManualTranslation("   "))
+        XCTAssertFalse(draft.canConfirm)
+        let pending = try XCTUnwrap(draft.beginTranslation())
+
+        XCTAssertTrue(draft.acceptManualTranslation("By 4 p.m. on Friday"))
+        XCTAssertFalse(draft.hasTranslatedCurrentSource)
+        XCTAssertTrue(draft.canConfirm)
+        XCTAssertFalse(draft.receiveTranslation("Late result", for: pending))
+        XCTAssertFalse(draft.failTranslation(.timeout, for: pending))
+        XCTAssertEqual(draft.translation, "By 4 p.m. on Friday")
+        XCTAssertEqual(draft.originalText, "周五 16:00 前")
+
+        var restored = try JSONDecoder().decode(ReplyDraft.self, from: JSONEncoder().encode(draft))
+        XCTAssertTrue(restored.canConfirm)
+        XCTAssertFalse(restored.hasTranslatedCurrentSource)
+        restored.original = "周五 15:30 前"
+        XCTAssertFalse(restored.canConfirm)
+        XCTAssertTrue(restored.translation.isEmpty)
+        XCTAssertTrue(restored.acceptManualTranslation("By 3:30 p.m. on Friday"))
+        restored.language = .english
+        XCTAssertFalse(restored.hasReviewedTranslation)
+        XCTAssertFalse(restored.canConfirm)
+    }
+
+    func testUnappliedFieldEditsSurviveReopeningUntilDoneOrCancel() throws {
+        var draft = ReplyDraft(taskID: UUID())
+        let location = try XCTUnwrap(draft.fields.first { $0.kind == .location })
+        draft.pendingField = location
+        draft.pendingField?.edit("Library reception", in: .english)
+        draft = try reopenCachedDraft(draft)
+        let recoveredLocation = try XCTUnwrap(draft.pendingField)
+        XCTAssertEqual(recoveredLocation.id, location.id)
+        XCTAssertEqual(recoveredLocation.text.english, "Library reception")
+        XCTAssertTrue(draft.hasDraftContent)
+        XCTAssertTrue(draft.confirmedFields.isEmpty)
+
+        draft.applyReviewedField(recoveredLocation)
+        draft = try reopenCachedDraft(draft)
+        XCTAssertNil(draft.pendingField)
+        XCTAssertEqual(draft.confirmedFields.map(\.id), [location.id])
+        XCTAssertEqual(draft.confirmedFields.first?.text.english, "Library reception")
+
+        draft.original = "Go to library reception."
+        draft.language = .english
+        XCTAssertTrue(draft.acceptManualTranslation("请到图书馆前台。"))
+        let extraMaterial = FieldDraft(kind: .material)
+        draft.pendingField = extraMaterial
+        draft.pendingField?.edit("Passport copy", in: .english)
+        draft = try reopenCachedDraft(draft)
+        let recoveredMaterial = try XCTUnwrap(draft.pendingField)
+        XCTAssertEqual(recoveredMaterial.id, extraMaterial.id)
+        XCTAssertEqual(recoveredMaterial.text.english, "Passport copy")
+        XCTAssertFalse(draft.fields.contains { $0.id == extraMaterial.id })
+        XCTAssertFalse(draft.canConfirm)
+
+        var cancelled = draft
+        cancelled.pendingField = nil
+        cancelled = try reopenCachedDraft(cancelled)
+        XCTAssertNil(cancelled.pendingField)
+        XCTAssertEqual(cancelled.confirmedFields.map(\.id), [location.id])
+        XCTAssertTrue(cancelled.canConfirm)
+
+        draft.applyReviewedField(recoveredMaterial)
+        draft = try reopenCachedDraft(draft)
+        XCTAssertNil(draft.pendingField)
+        XCTAssertEqual(draft.confirmedFields.filter { $0.id == extraMaterial.id }.count, 1)
+    }
+
+    func testPendingManualTranslationReopensWithoutReplacingReviewedText() throws {
+        var draft = ReplyDraft(taskID: UUID())
+        draft.original = "周五下午四点前"
+        draft.pendingManualTranslation = "By 4 p.m. on Friday"
+        draft = try reopenCachedDraft(draft)
+        let recoveredText = try XCTUnwrap(draft.pendingManualTranslation)
+        XCTAssertEqual(recoveredText, "By 4 p.m. on Friday")
+        XCTAssertTrue(draft.translation.isEmpty)
+        XCTAssertFalse(draft.canConfirm)
+
+        XCTAssertTrue(draft.acceptManualTranslation(recoveredText))
+        draft = try reopenCachedDraft(draft)
+        XCTAssertNil(draft.pendingManualTranslation)
+        XCTAssertEqual(draft.translation, recoveredText)
+        XCTAssertTrue(draft.canConfirm)
+
+        draft.pendingManualTranslation = "Please arrive before 4 p.m. on Friday"
+        draft = try reopenCachedDraft(draft)
+        XCTAssertFalse(draft.canConfirm)
+        XCTAssertEqual(draft.translation, recoveredText)
+
+        var cancelled = draft
+        cancelled.pendingManualTranslation = nil
+        cancelled = try reopenCachedDraft(cancelled)
+        XCTAssertEqual(cancelled.translation, recoveredText)
+        XCTAssertNil(cancelled.pendingManualTranslation)
+        XCTAssertTrue(cancelled.canConfirm)
+
+        var changedLanguage = draft
+        changedLanguage.language = .english
+        XCTAssertNil(try reopenCachedDraft(changedLanguage).pendingManualTranslation)
+        draft.original = "周五下午三点半前"
+        draft = try reopenCachedDraft(draft)
+        XCTAssertNil(draft.pendingManualTranslation)
+        XCTAssertFalse(draft.canConfirm)
+    }
+
+    private func reopenCachedDraft(_ draft: ReplyDraft) throws -> ReplyDraft {
+        let suite = "ReplyWorkflowTests.\(UUID().uuidString)"
+        let writer = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { writer.removePersistentDomain(forName: suite) }
+        ReplyDraftCache(defaults: writer).save(draft)
+        let reader = try XCTUnwrap(UserDefaults(suiteName: suite))
+        return try XCTUnwrap(ReplyDraftCache(defaults: reader).load(for: draft))
+    }
+
+    func testSavingAFieldSheetTracksEditsAcrossReopens() throws {
+        var draft = ReplyDraft(taskID: UUID())
+        var material = FieldDraft(kind: .material)
+        material.edit("Passport", in: .english)
+        draft.applyReviewedField(material)
+        XCTAssertFalse(try XCTUnwrap(draft.fields.last).userEdited)
+
+        var cached = try JSONDecoder().decode(ReplyDraft.self, from: JSONEncoder().encode(draft))
+        var reopened = try XCTUnwrap(cached.fields.last)
+        XCTAssertEqual(reopened.id, material.id)
+        reopened.edit("Passport copy", in: .english)
+        cached.applyReviewedField(reopened)
+        XCTAssertTrue(try XCTUnwrap(cached.fields.last).userEdited)
+
+        var original = FieldDraft(kind: .material)
+        original.edit("Old requirement", in: .english)
+        var correction = ReplyDraft(taskID: UUID(), correctingActionID: UUID(), changes: [original])
+        correction.applyReviewedField(original)
+        var replacement = correction.fields[0]
+        replacement.edit("New requirement", in: .english)
+        correction.applyReviewedField(replacement)
+        XCTAssertFalse(correction.fields[0].userEdited)
+        replacement = correction.fields[0]
+        replacement.edit("Reviewed replacement", in: .english)
+        correction.applyReviewedField(replacement)
+        XCTAssertTrue(correction.fields[0].userEdited)
+    }
+
+    func testExplicitReviewChoiceOverridesAnOlderCachedEditedFlag() throws {
+        var legacy = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(
+            FieldDraft(kind: .material)
+        )) as? [String: Any])
+        legacy["wasEditedDuringReview"] = true
+        var field = try JSONDecoder().decode(FieldDraft.self, from: JSONSerialization.data(withJSONObject: legacy))
+        XCTAssertTrue(field.userEdited)
+        field.userEdited = false
+        XCTAssertFalse(try JSONDecoder().decode(FieldDraft.self, from: JSONEncoder().encode(field)).userEdited)
     }
 
     func testLateSuccessAndErrorCannotReplaceEditedSourceOrTranslation() throws {

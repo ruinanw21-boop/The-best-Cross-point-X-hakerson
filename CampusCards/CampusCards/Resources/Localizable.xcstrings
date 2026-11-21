@@ -1,6 +1,284 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "Bilingual Cards": { "extractionState": "manual", "localizations": { "zh-Hans": { "stringUnit": { "state": "translated", "value": "双语办事卡" } } } },
+    "In-person conversations": { "extractionState": "manual", "localizations": { "zh-Hans": { "stringUnit": { "state": "translated", "value": "当面沟通" } } } },
+    "Bring your question.": { "extractionState": "manual", "localizations": { "zh-Hans": { "stringUnit": { "state": "translated", "value": "带上你的问题。" } } } },
+    "Ask in their language. Keep the answer in both.": { "extractionState": "manual", "localizations": { "zh-Hans": { "stringUnit": { "state": "translated", "value": "用对方熟悉的语言提问，留下双语答复。" } } } },
+    "Choose which language to show when you open the card.": { "extractionState": "manual", "localizations": { "zh-Hans": { "stringUnit": { "state": "translated", "value": "出示时可以交换两种语言的顺序。" } } } },
+    "Show this language": { "extractionState": "manual", "localizations": { "zh-Hans": { "stringUnit": { "state": "translated", "value": "出示给对方" } } } },
+    "Reference": { "extractionState": "manual", "localizations": { "zh-Hans": { "stringUnit": { "state": "translated", "value": "对照" } } } },
+    "Confirmed details": { "extractionState": "manual", "localizations": { "zh-Hans": { "stringUnit": { "state": "translated", "value": "已确认信息" } } } },
+    "Still to confirm": { "extractionState": "manual", "localizations": { "zh-Hans": { "stringUnit": { "state": "translated", "value": "还需要确认" } } } },
+    "Show follow-up questions": { "extractionState": "manual", "localizations": { "zh-Hans": { "stringUnit": { "state": "translated", "value": "出示追问" } } } },
+    "Follow-up questions": { "extractionState": "manual", "localizations": { "zh-Hans": { "stringUnit": { "state": "translated", "value": "需要追问的问题" } } } },
+    "Enter translation manually": { "extractionState": "manual", "localizations": { "zh-Hans": { "stringUnit": { "state": "translated", "value": "手填译文" } } } },
+    "Use reviewed translation": { "extractionState": "manual", "localizations": { "zh-Hans": { "stringUnit": { "state": "translated", "value": "使用已核对的译文" } } } },
+    "Manually reviewed": { "extractionState": "manual", "localizations": { "zh-Hans": { "stringUnit": { "state": "translated", "value": "手动核对" } } } },
+    "Add": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加"
+          }
+        }
+      }
+    },
+    "Add enrollment example": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加入学示例"
+          }
+        }
+      }
+    },
+    "At the campus desk": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "校园服务台"
+          }
+        }
+      }
+    },
+    "Campus Cards": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "双语办事卡"
+          }
+        }
+      }
+    },
+    "Check before you leave": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "离开柜台前核对"
+          }
+        }
+      }
+    },
+    "Checklist edits don’t change the original reply.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "修改清单不会改变这轮答复的原话。"
+          }
+        }
+      }
+    },
+    "Chinese appears first when you show this card.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "出示卡片时，默认先显示大字中文。"
+          }
+        }
+      }
+    },
+    "Done": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "完成"
+          }
+        }
+      }
+    },
+    "Edit": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "编辑"
+          }
+        }
+      }
+    },
+    "Edited during review": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用户核对时修改"
+          }
+        }
+      }
+    },
+    "No completed tasks yet": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "还没有办结的事项"
+          }
+        }
+      }
+    },
+    "Not added in this reply": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "本轮未补充"
+          }
+        }
+      }
+    },
+    "Not sure where to start? Try the enrollment example.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不知道从哪开始？试试补交入学材料的示例。"
+          }
+        }
+      }
+    },
+    "Prepare a question": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "准备你的问句"
+          }
+        }
+      }
+    },
+    "Reply source": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "答复依据"
+          }
+        }
+      }
+    },
+    "Review the reply": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "核对这轮答复"
+          }
+        }
+      }
+    },
+    "Show your question in Chinese. Keep the answer in both languages.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用中文问清楚，把双语答复带走。"
+          }
+        }
+      }
+    },
+    "Start with their words. You can review the details next.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "先记下对方的原话，下一步再核对细节。"
+          }
+        }
+      }
+    },
+    "Start with what you need to do.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "先选你要办的事。"
+          }
+        }
+      }
+    },
+    "Take the question with you.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "带着问题去柜台。"
+          }
+        }
+      }
+    },
+    "Time on the checklist": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清单上的时间"
+          }
+        }
+      }
+    },
+    "Translation": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "译文"
+          }
+        }
+      }
+    },
+    "View source": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "查看依据"
+          }
+        }
+      }
+    },
+    "What did they say?": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "对方怎么说的？"
+          }
+        }
+      }
+    },
     "Action checklist": {
       "extractionState": "manual",
       "localizations": {
@@ -107,6 +385,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "请检查原文和所选语言，再次翻译。"
+          }
+        }
+      }
+    },
+    "Checklist": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清单"
           }
         }
       }
@@ -232,6 +521,17 @@
         }
       }
     },
+    "Copy translation": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "复制译文"
+          }
+        }
+      }
+    },
     "Correct requirement": {
       "extractionState": "manual",
       "localizations": {
@@ -316,6 +616,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "转写失败，请重试或键入原话。"
+          }
+        }
+      }
+    },
+    "Create a task to show a bilingual question and save the reply.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新建事项，出示双语问题并保存柜台答复。"
           }
         }
       }
@@ -474,6 +785,17 @@
         }
       }
     },
+    "First language": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "第一语言"
+          }
+        }
+      }
+    },
     "Follow-up question": {
       "extractionState": "manual",
       "localizations": {
@@ -492,6 +814,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "周五"
+          }
+        }
+      }
+    },
+    "Hold to speak": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按住说话"
           }
         }
       }
@@ -650,6 +983,39 @@
         }
       }
     },
+    "No completed tasks": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂无已办结事项"
+          }
+        }
+      }
+    },
+    "No tasks in progress": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂无进行中的事项"
+          }
+        }
+      }
+    },
+    "No tasks yet": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂无事项"
+          }
+        }
+      }
+    },
     "No weekday": {
       "extractionState": "manual",
       "localizations": {
@@ -661,17 +1027,6 @@
         }
       }
     },
-    "OK": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "好"
-          }
-        }
-      }
-    },
     "Offline speech resources are unavailable. You can type the reply.": {
       "extractionState": "manual",
       "localizations": {
@@ -679,6 +1034,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "本地语音模型或分词资源不可用。你仍可键入答复。"
+          }
+        }
+      }
+    },
+    "OK": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "好"
           }
         }
       }
@@ -789,6 +1155,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "录音中断。请重新按住麦克风说话，或键入答复。"
+          }
+        }
+      }
+    },
+    "Recording…": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "录音中…"
           }
         }
       }
@@ -947,6 +1324,28 @@
         }
       }
     },
+    "Save address": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存地址"
+          }
+        }
+      }
+    },
+    "Save and translate": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存并翻译"
+          }
+        }
+      }
+    },
     "Saved replies will appear here.": {
       "extractionState": "manual",
       "localizations": {
@@ -965,6 +1364,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "办事场景"
+          }
+        }
+      }
+    },
+    "Second language": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "第二语言"
           }
         }
       }
@@ -1024,6 +1434,17 @@
         }
       }
     },
+    "Source language": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "原文语言"
+          }
+        }
+      }
+    },
     "Stop playback": {
       "extractionState": "manual",
       "localizations": {
@@ -1053,6 +1474,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "交换主副语言"
+          }
+        }
+      }
+    },
+    "Swap translation languages": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "交换翻译语言"
+          }
+        }
+      }
+    },
+    "Target language": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "译文语言"
           }
         }
       }
@@ -1097,6 +1540,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "英文事项名称"
+          }
+        }
+      }
+    },
+    "Task status": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "事项状态"
           }
         }
       }
@@ -1189,6 +1643,17 @@
         }
       }
     },
+    "Translate reply": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "翻译答复"
+          }
+        }
+      }
+    },
     "Translate to Chinese": {
       "extractionState": "manual",
       "localizations": {
@@ -1233,6 +1698,39 @@
         }
       }
     },
+    "Translation service": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "翻译服务"
+          }
+        }
+      }
+    },
+    "Translation settings": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "翻译设置"
+          }
+        }
+      }
+    },
+    "Translation will appear here.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "译文会显示在这里。"
+          }
+        }
+      }
+    },
     "Try again": {
       "extractionState": "manual",
       "localizations": {
@@ -1262,6 +1760,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "输入工作人员或同学的原话"
+          }
+        }
+      }
+    },
+    "Use the service base address, without /translate.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请填写服务根地址，省略末尾的 /translate。"
           }
         }
       }

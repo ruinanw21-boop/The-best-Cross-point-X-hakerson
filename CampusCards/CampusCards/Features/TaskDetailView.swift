@@ -9,9 +9,11 @@ struct TaskDetailView: View {
     @Query private var turns: [ConversationTurn]
     @State private var card: CardContent?
     @State private var reply: ReplyPresentation?
-    @State private var savedTurnID: UUID?
-    @State private var recordAfterCard = false
+    @State private var replySource: ConversationTurn?
     @State private var saveError = false
+    @State private var showHistory = false
+    @State private var savedNotice: UUID?
+    @State private var savedTurnID: UUID?
 
     init(task: CampusTask) {
         self.task = task
@@ -21,93 +23,144 @@ struct TaskDetailView: View {
     }
 
     private var lang: CardLanguage { language.wrappedValue }
-    private var missing: [RequirementKind] {
+    private var confirmedActions: [ActionItem] {
+        CampusStyle.ticketOrder.flatMap { kind in actions.filter { $0.kind == kind } }
+    }
+
+    private var missingRequirements: [RequirementKind] {
         let answered = Set(actions.map(\.kind))
-        return task.fields.filter { !answered.contains($0) }
+        return CampusStyle.ticketOrder.filter { task.fields.contains($0) && !answered.contains($0) }
     }
 
     var body: some View {
-        List {
-            Section {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 26) {
                 header
-            }
-            .listRowBackground(Color.clear)
-            .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 4, trailing: 0))
-
-            Section(lang.text("Action checklist")) {
-                if actions.isEmpty {
-                    Text(lang.text("Confirmed requirements will appear here."))
-                        .foregroundStyle(.secondary)
-                }
-
-                ForEach(actions) { item in
-                    actionRow(item)
-                }
-
-                if !actions.isEmpty {
-                    Button {
-                        showChecklist()
-                    } label: {
-                        Label(lang.text("Show checklist"), systemImage: "text.rectangle")
-                    }
-                }
-            }
-
-            if !missing.isEmpty {
-                Section(lang.text("To ask")) {
-                    ForEach(missing) { kind in
-                        Button {
-                            card = .init(title: "Follow-up question", text: kind.question)
-                        } label: {
-                            Label(kind.question.preferred(lang), systemImage: "questionmark.bubble")
-                        }
-                    }
-                }
-            }
-
-            Section(lang.text("Conversation history")) {
-                if turns.isEmpty {
-                    Text(lang.text("Saved replies will appear here."))
-                        .foregroundStyle(.secondary)
-                }
-                ForEach(turns) { turn in
-                    historyRow(turn)
-                }
-            }
-
-            Section {
+                checklistFeed
+                historyFeed
                 Button {
                     change { try $0.setComplete(!task.isComplete, for: task) }
                 } label: {
-                    Label(
-                        lang.text(task.isComplete ? "Reopen task" : "Mark complete"),
-                        systemImage: task.isComplete ? "arrow.uturn.backward" : "checkmark.circle"
-                    )
+                    Label(lang.text(task.isComplete ? "Reopen task" : "Mark complete"),
+                          systemImage: task.isComplete ? "arrow.uturn.backward" : "checkmark.circle")
                 }
+                .buttonStyle(DeskButtonStyle(tone: .soft))
                 .accessibilityIdentifier("toggle-complete")
             }
+            .deskPage()
         }
+        .background(CampusStyle.canvas.ignoresSafeArea())
         .navigationTitle(lang.text("Task details"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { ToolbarItem(placement: .topBarTrailing) { LanguageMenu() } }
-        .fullScreenCover(item: $card, onDismiss: {
-            if recordAfterCard {
-                recordAfterCard = false
-                reply = .init()
-            }
-        }) { content in
-            ShowCardView(card: content) {
-                recordAfterCard = true
-                card = nil
-            }
+        .navigationDestination(item: $replySource) { turn in
+            ReplySourceView(turn: turn)
+        }
+        .fullScreenCover(item: $card) { content in
+            ShowCardView(card: content)
         }
         .sheet(item: $reply) { presentation in
-            ReviewReplyView(task: task, correcting: presentation.correction, onSaved: { id in
-                savedTurnID = id
+            ReviewReplyView(task: task, correcting: presentation.correction, onSaved: { turnID in
+                savedTurnID = turnID
+                savedNotice = UUID()
+                showHistory = true
             })
             .id(presentation.id)
         }
+        .task(id: savedNotice) {
+            guard let notice = savedNotice else { return }
+            do {
+                try await Task.sleep(for: .seconds(4))
+            } catch {
+                return
+            }
+            if savedNotice == notice { savedNotice = nil }
+        }
         .modifier(SaveErrorAlert(presented: $saveError))
+    }
+
+    private var checklistFeed: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            DeskHeading(title: lang.text("Confirmed details"))
+            if savedNotice != nil {
+                Label(lang.text("Reply saved"), systemImage: "checkmark.circle.fill")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(CampusStyle.accent)
+            }
+            let rows = confirmedActions
+            if rows.isEmpty {
+                Text(lang.text("Confirmed requirements will appear here."))
+                    .foregroundStyle(CampusStyle.muted)
+            } else {
+                TicketSurface {
+                    VStack(alignment: .leading, spacing: 10) {
+                        ForEach(rows) { item in
+                            if item.id != rows.first?.id { TicketRule() }
+                            actionRow(item)
+                        }
+                    }
+                }
+                Button(action: showChecklist) {
+                    Label(lang.text("Show checklist"), systemImage: "text.rectangle")
+                }
+                .buttonStyle(DeskButtonStyle(tone: .soft))
+            }
+            let missing = missingRequirements
+            if !turns.isEmpty, let questions = CardContent.followUp(for: missing) {
+                TicketRule()
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(lang.text("Still to confirm"))
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(CampusStyle.pending)
+                    Text(verbatim: missing.map { lang.text($0.label) }.joined(separator: lang == .chinese ? "、" : ", "))
+                        .font(.subheadline)
+                        .foregroundStyle(CampusStyle.muted)
+                    Button {
+                        card = questions
+                    } label: {
+                        Label(lang.text("Show follow-up questions"), systemImage: "questionmark.bubble")
+                    }
+                    .buttonStyle(DeskButtonStyle(tone: .soft))
+                    .accessibilityIdentifier("show-follow-up")
+                }
+            }
+        }
+    }
+
+    private var historyFeed: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            if turns.isEmpty {
+                DeskHeading(title: lang.text("Conversation history"), subtitle: lang.text("Saved replies will appear here."))
+            } else {
+                DisclosureGroup(isExpanded: $showHistory) {
+                    VStack(alignment: .leading, spacing: 14) {
+                        ForEach(turns) { turn in
+                            Button { replySource = turn } label: {
+                                HStack(alignment: .top, spacing: 12) {
+                                    Circle()
+                                        .fill(CampusStyle.accent)
+                                        .frame(width: 8, height: 8)
+                                        .padding(.top, 8)
+                                        .accessibilityHidden(true)
+                                    historyRow(turn)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .contentShape(Rectangle())
+                                }
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.top, 10)
+                    .overlay(alignment: .leading) {
+                        Rectangle().fill(CampusStyle.rule).frame(width: 1).padding(.leading, 3.5)
+                            .allowsHitTesting(false).accessibilityHidden(true)
+                    }
+                } label: {
+                    DeskHeading(title: lang.text("Conversation history"))
+                        .padding(.vertical, 8)
+                }
+            }
+        }
     }
 
     private var header: some View {
@@ -117,9 +170,14 @@ struct TaskDetailView: View {
                 systemImage: task.isComplete ? "checkmark.circle.fill" : task.scenario.icon
             )
             .font(.caption.weight(.semibold))
+            .foregroundStyle(CampusStyle.accent)
+            .padding(.horizontal, 11)
+            .padding(.vertical, 7)
+            .background(CampusStyle.mist, in: Capsule())
 
             Text(verbatim: task.title.preferred(lang))
-                .font(.title.weight(.bold))
+                .font(.largeTitle.weight(.bold))
+                .foregroundStyle(CampusStyle.ticketInk)
                 .accessibilityAddTraits(.isHeader)
 
             ViewThatFits(in: .horizontal) {
@@ -128,9 +186,8 @@ struct TaskDetailView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(20)
-        .foregroundStyle(CampusStyle.cardInk)
-        .background(CampusStyle.paper, in: RoundedRectangle(cornerRadius: 24))
+        .padding(.vertical, 8)
+        .controlSize(.large)
     }
 
     @ViewBuilder
@@ -140,7 +197,7 @@ struct TaskDetailView: View {
         } label: {
             Label(lang.text("Show card"), systemImage: "text.bubble")
         }
-        .buttonStyle(.borderedProminent)
+        .buttonStyle(DeskButtonStyle(tone: .primary))
         .accessibilityIdentifier("show-question")
 
         Button {
@@ -148,7 +205,7 @@ struct TaskDetailView: View {
         } label: {
             Label(lang.text("Record reply"), systemImage: "plus.bubble")
         }
-        .buttonStyle(.bordered)
+        .buttonStyle(DeskButtonStyle(tone: .soft))
         .accessibilityIdentifier("record-reply")
     }
 
@@ -170,10 +227,20 @@ struct TaskDetailView: View {
             }
 
             VStack(alignment: .leading, spacing: 6) {
-                Label(lang.text(item.kind.label), systemImage: item.kind.icon)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                LanguageLines(text: item.text, primary: lang)
+                TicketField(kind: item.kind, text: item.text, edited: item.reviewedAsEdited)
+
+                if let turn = turns.first(where: { $0.id == item.sourceTurnID }) {
+                    Button {
+                        replySource = turn
+                    } label: {
+                        Label(lang.text("View source"), systemImage: "text.bubble")
+                            .font(.subheadline)
+                            .frame(minHeight: 44, alignment: .leading)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.borderless)
+                    .accessibilityIdentifier("requirement-source-\(item.kind.rawValue)")
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.vertical, 4)
@@ -196,35 +263,22 @@ struct TaskDetailView: View {
 
     private func historyRow(_ turn: ConversationTurn) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Label(lang.text(turn.kind.label), systemImage: turn.kind == .directions ? "location" : "bubble.left")
-                .font(.subheadline.weight(.semibold))
-
+            ReplyMetadata(turn: turn)
             if turn.id == savedTurnID {
                 Label(lang.text("Reply saved"), systemImage: "checkmark.circle")
-                    .font(.caption)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(CampusStyle.accent)
                     .accessibilityIdentifier("reply-saved")
             }
-
-            Text(turn.confirmedAt, format: .dateTime.month().day().hour().minute())
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            if !turn.speaker.isEmpty {
-                Text(verbatim: turn.speaker).font(.caption).foregroundStyle(.secondary)
+            if turn.recordingRef != nil {
+                Label(lang.text("Play recording"), systemImage: "waveform")
+                    .font(.caption)
+                    .foregroundStyle(CampusStyle.accent)
             }
 
             Text(verbatim: turn.original)
                 .environment(\.locale, turn.originalLanguage.locale)
                 .accessibilityIdentifier("history-original")
-
-            if let initial = turn.originalText, initial != turn.original {
-                DisclosureGroup(lang.text("Original wording")) {
-                    Text(verbatim: initial)
-                        .environment(\.locale, turn.originalLanguage.locale)
-                        .textSelection(.enabled)
-                }
-                .font(.footnote)
-            }
 
             if !turn.translation.isEmpty {
                 Text(verbatim: turn.translation)
@@ -232,23 +286,20 @@ struct TaskDetailView: View {
                     .foregroundStyle(.secondary)
                     .environment(\.locale, turn.originalLanguage.other.locale)
             }
-
-            if let reference = turn.recordingRef {
-                RecordingPlaybackButton(recordingRef: reference)
-            }
         }
         .padding(.vertical, 5)
     }
 
     private func showChecklist() {
+        let confirmed = confirmedActions
         var text = BilingualText()
         for cardLanguage in CardLanguage.allCases {
-            text[cardLanguage] = actions.map { item in
+            text[cardLanguage] = confirmed.map { item in
                 let value = item.text[cardLanguage]
                 return "\(cardLanguage.text(item.kind.label)) · \(value.isEmpty ? cardLanguage.text("Translation needed") : value)"
             }.joined(separator: "\n\n")
         }
-        card = .init(title: "Action checklist", text: text)
+        card = .init(title: "Action checklist", text: text, usesLargeType: false)
     }
 
     private func change(_ persist: (TaskStore) throws -> Void) {
@@ -256,6 +307,69 @@ struct TaskDetailView: View {
             try persist(TaskStore(context: context))
         } catch {
             saveError = true
+        }
+    }
+}
+
+private struct ReplySourceView: View {
+    @Environment(\.cardLanguage) private var language
+    let turn: ConversationTurn
+
+    var body: some View {
+        let lang = language.wrappedValue
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                ReplyMetadata(turn: turn)
+                DeskHeading(title: lang.text("Original reply"))
+                Text(verbatim: turn.original)
+                    .font(.title3)
+                    .environment(\.locale, turn.originalLanguage.locale)
+                    .textSelection(.enabled)
+                    .accessibilityIdentifier("source-original")
+                if !turn.translation.isEmpty {
+                    TicketRule()
+                    DeskHeading(title: lang.text("Translation"))
+                    Text(verbatim: turn.translation)
+                        .environment(\.locale, turn.originalLanguage.other.locale)
+                        .textSelection(.enabled)
+                }
+                if let initial = turn.originalText, initial != turn.original {
+                    DisclosureGroup(lang.text("Original wording")) {
+                        Text(verbatim: initial)
+                            .environment(\.locale, turn.originalLanguage.locale)
+                            .textSelection(.enabled)
+                            .padding(.top, 8)
+                    }
+                }
+                if let reference = turn.recordingRef {
+                    RecordingPlaybackButton(recordingRef: reference)
+                }
+            }
+            .deskPage()
+        }
+        .background(CampusStyle.canvas.ignoresSafeArea())
+        .navigationTitle(lang.text("Reply source"))
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar { ToolbarItem(placement: .topBarTrailing) { LanguageMenu() } }
+    }
+}
+
+private struct ReplyMetadata: View {
+    @Environment(\.cardLanguage) private var language
+    let turn: ConversationTurn
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Label(language.wrappedValue.text(turn.kind.label), systemImage: turn.kind == .directions ? "location" : "bubble.left")
+                .font(.subheadline.weight(.semibold))
+            Text(turn.confirmedAt, format: .dateTime.month().day().hour().minute())
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            if !turn.speaker.isEmpty {
+                Text(verbatim: turn.speaker)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 }

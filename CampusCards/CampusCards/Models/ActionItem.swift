@@ -85,6 +85,9 @@ final class ActionItem {
     var timeWeekday: Int?
     var timeMinute: Int?
     var timeIsCutoff: Bool
+    // Earlier frontend builds persisted this name. New writes use userEdited.
+    var wasEditedDuringReview: Bool? = nil
+    var reviewedAsEdited: Bool { wasEditedDuringReview ?? userEdited }
     var isChecked: Bool
     var createdAt: Date
 
@@ -127,6 +130,7 @@ final class ActionItem {
         timeWeekday = field.confirmedTime?.weekday.rawValue
         timeMinute = field.confirmedTime?.minuteOfDay
         timeIsCutoff = field.confirmedTime?.isCutoff ?? true
+        wasEditedDuringReview = nil
         isChecked = false
     }
 }

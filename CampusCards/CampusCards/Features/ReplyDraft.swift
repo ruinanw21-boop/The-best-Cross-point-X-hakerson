@@ -32,13 +32,18 @@ struct ReplyDraft: Codable, Equatable {
     private(set) var translation = ""
     var speaker = ""
     var fields: [FieldDraft]
+    // These edits reopen with the draft. Only the sheet's confirmation applies them.
+    var pendingField: FieldDraft?
+    var pendingManualTranslation: String?
 
     private(set) var version = 0
     private var pending: Operation?
     private(set) var translationError: TranslationServiceError?
     // Older cache entries lack this evidence and must be translated before confirmation.
     private var receivedTranslation: Bool?
+    private var acceptedManualTranslation: Bool?
     var hasTranslatedCurrentSource: Bool { receivedTranslation == true }
+    var hasReviewedTranslation: Bool { hasTranslatedCurrentSource || acceptedManualTranslation == true }
 
     private enum Operation: Equatable {
         case recognition(CardLanguage, recordingRef: String?)
@@ -47,7 +52,8 @@ struct ReplyDraft: Codable, Equatable {
     private enum CodingKeys: String, CodingKey {
         case id, taskID, correctedActionID, targetActionID, kind, original, originalText
         case sourceLanguage = "language"
-        case recordingRef, translation, speaker, fields, version, receivedTranslation
+        case recordingRef, translation, speaker, fields, version, receivedTranslation, acceptedManualTranslation
+        case pendingField, pendingManualTranslation
     }
 
     var isTranslating: Bool { pending == .translation }
@@ -57,9 +63,15 @@ struct ReplyDraft: Codable, Equatable {
     }
 
     var canReview: Bool { recordingRef != nil || !original.cleaned.isEmpty }
+    var hasPendingEdits: Bool { pendingField != nil || pendingManualTranslation != nil }
+
+    var hasDraftContent: Bool {
+        canReview || !speaker.cleaned.isEmpty || !confirmedFields.isEmpty || hasPendingEdits
+    }
 
     var canConfirm: Bool {
-        hasTranslatedCurrentSource && pending == nil && !original.cleaned.isEmpty && !translation.cleaned.isEmpty
+        hasReviewedTranslation && pending == nil && !original.cleaned.isEmpty && !translation.cleaned.isEmpty
+            && !hasPendingEdits
             && (kind != .correction || !confirmedFields.isEmpty)
     }
 
@@ -112,6 +124,8 @@ struct ReplyDraft: Codable, Equatable {
     private mutating func invalidateSource() {
         invalidateRequests()
         receivedTranslation = nil
+        acceptedManualTranslation = nil
+        pendingManualTranslation = nil
         translation = ""
     }
 
@@ -138,6 +152,8 @@ struct ReplyDraft: Codable, Equatable {
         recordingRef = reference
         originalText = nil
         receivedTranslation = nil
+        acceptedManualTranslation = nil
+        pendingManualTranslation = nil
         translation = ""
         return true
     }
@@ -188,6 +204,7 @@ struct ReplyDraft: Codable, Equatable {
         pending = nil
         translation = value
         receivedTranslation = true
+        acceptedManualTranslation = nil
         return true
     }
 
@@ -199,8 +216,32 @@ struct ReplyDraft: Codable, Equatable {
         return true
     }
 
+    @discardableResult
+    mutating func acceptManualTranslation(_ text: String) -> Bool {
+        guard !original.cleaned.isEmpty, !text.cleaned.isEmpty else { return false }
+        captureOriginal()
+        invalidateRequests()
+        translation = text.cleaned
+        receivedTranslation = nil
+        acceptedManualTranslation = true
+        pendingManualTranslation = nil
+        return true
+    }
+
+    mutating func applyReviewedField(_ updated: FieldDraft) {
+        pendingField = nil
+        var field = updated
+        if let index = fields.firstIndex(where: { $0.id == field.id }) {
+            field.finishReview(previous: fields[index], isCorrection: kind == .correction)
+            fields[index] = field
+        } else if kind == .requirements, field.kind == .material, !field.effectiveText.isEmpty {
+            field.finishReview(previous: nil, isCorrection: false)
+            fields.append(field)
+        }
+    }
+
     mutating func editTranslation(_ text: String) {
-        guard hasTranslatedCurrentSource, translation != text else { return }
+        guard hasReviewedTranslation, translation != text else { return }
         invalidateRequests()
         translation = text
     }
@@ -212,6 +253,7 @@ struct FieldDraft: Codable, Equatable, Identifiable {
     var targetFieldID: UUID?
     var text = BilingualText()
     var pendingReview: CardLanguage?
+    private var wasEditedDuringReview: Bool?
     var useExactTime = false
     var time = ConfirmedTime()
 
@@ -225,10 +267,14 @@ struct FieldDraft: Codable, Equatable, Identifiable {
     var userEdited: Bool {
         get {
             if let editOverride { return editOverride }
+            if wasEditedDuringReview == true { return true }
             if let confirmedTime {
-                return reviewTimeBaseline.map { $0 != confirmedTime } ?? false
+                if let baseline = reviewTimeBaseline { return baseline != confirmedTime }
+                return reviewTextBaseline != nil
             }
-            guard let baseline = reviewTextBaseline else { return false }
+            guard let baseline = reviewTextBaseline else {
+                return reviewTimeBaseline != nil && !confirmedText.isEmpty
+            }
             return CardLanguage.allCases.contains { language in
                 language != pendingReview && !baseline[language].isEmpty
                     && baseline[language] != text[language].cleaned
@@ -237,8 +283,49 @@ struct FieldDraft: Codable, Equatable, Identifiable {
         set { editOverride = newValue }
     }
 
+    // A sheet can finish before its focused control reports a focus change.
+    // The first replacement in a correction is what the new speaker said.
+    fileprivate mutating func finishReview(previous: FieldDraft?, isCorrection: Bool) {
+        if let previous, previous.reviewTimeBaseline != nil, previous.reviewTextBaseline != nil {
+            // Older drafts could remember both formats. Keep the baseline they reopened with.
+            if previous.confirmedTime == nil { reviewTimeBaseline = nil }
+            else { reviewTextBaseline = nil }
+        }
+        if let previous, previous.reviewTimeBaseline == nil, previous.reviewTextBaseline == nil,
+           !previous.effectiveText.isEmpty {
+            if isCorrection, previous.confirmedTime == confirmedTime, previous.effectiveText == effectiveText {
+                // Accepting the unchanged older reply is not a baseline for the new speaker.
+                reviewTimeBaseline = nil
+                reviewTextBaseline = nil
+                return
+            }
+            if !isCorrection, (previous.confirmedTime == nil) != (confirmedTime == nil) {
+                // A pre-upgrade pending draft can have a value without a baseline.
+                reviewTimeBaseline = previous.confirmedTime
+                reviewTextBaseline = previous.confirmedTime == nil ? previous.confirmedText : nil
+            }
+        }
+        if let confirmedTime {
+            if reviewTimeBaseline == nil, reviewTextBaseline == nil,
+               !isCorrection || confirmedTime != previous?.confirmedTime {
+                reviewTimeBaseline = isCorrection ? confirmedTime : (previous?.confirmedTime ?? confirmedTime)
+            }
+            return
+        }
+        guard reviewTimeBaseline == nil else { return }
+        var baseline = reviewTextBaseline ?? BilingualText()
+        for language in CardLanguage.allCases where baseline[language].isEmpty {
+            let value = confirmedText[language]
+            let previousValue = previous?.confirmedText[language] ?? ""
+            guard !value.isEmpty, !isCorrection || previousValue != value else { continue }
+            baseline[language] = isCorrection || previousValue.isEmpty ? value : previousValue
+        }
+        if !baseline.isEmpty { reviewTextBaseline = baseline }
+    }
+
     // Capture a complete entry when an editor changes focus, never its first keystroke.
     mutating func rememberReviewedText(in language: CardLanguage) {
+        guard reviewTimeBaseline == nil else { return }
         let value = text[language].cleaned
         var baseline = reviewTextBaseline ?? BilingualText()
         guard !value.isEmpty, baseline[language].isEmpty else { return }
@@ -248,7 +335,7 @@ struct FieldDraft: Codable, Equatable, Identifiable {
 
     // The first complete selection reflects this reply, including when it replaces an older deadline.
     mutating func confirmExactTime(_ selection: ConfirmedTime) {
-        if reviewTimeBaseline == nil { reviewTimeBaseline = selection }
+        if reviewTimeBaseline == nil, reviewTextBaseline == nil { reviewTimeBaseline = selection }
         time = selection
         useExactTime = true
     }

@@ -19,7 +19,7 @@ struct CampusCardsApp: App {
                     ProgressView().task { loadStore() }
                 }
             }
-            .tint(CampusStyle.ink)
+            .tint(CampusStyle.accent)
             .environment(\.cardLanguage, language)
             .environment(\.locale, language.wrappedValue.locale)
         }
@@ -48,11 +48,14 @@ private struct StorageRecoveryView: View {
     let retry: () -> Void
 
     var body: some View {
-        ContentUnavailableView {
-            Label(language.wrappedValue.text("Couldn’t open your tasks"), systemImage: "tray")
-        } actions: {
-            Button(language.wrappedValue.text("Try again"), action: retry)
-                .buttonStyle(.borderedProminent)
+        CampusPage {
+            ContentUnavailableView {
+                Label(language.wrappedValue.text("Couldn’t open your tasks"), systemImage: "tray")
+            }
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            CampusPrimaryAction(title: language.wrappedValue.text("Try again"), icon: "arrow.clockwise", action: retry)
+                .campusActionBar()
         }
     }
 }
