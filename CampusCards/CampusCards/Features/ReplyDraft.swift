@@ -200,6 +200,44 @@ struct FieldDraft: Codable, Equatable, Identifiable {
     var useExactTime = false
     var time = ConfirmedTime()
 
+    // These are optional so a pending draft from an earlier app version still decodes.
+    private var reviewTextBaseline: BilingualText?
+    private var reviewTimeBaseline: ConfirmedTime?
+    private var editOverride: Bool?
+
+    init(kind: RequirementKind) { self.kind = kind }
+
+    var userEdited: Bool {
+        get {
+            if let editOverride { return editOverride }
+            if let confirmedTime {
+                return reviewTimeBaseline.map { $0 != confirmedTime } ?? false
+            }
+            guard let baseline = reviewTextBaseline else { return false }
+            return CardLanguage.allCases.contains { language in
+                language != pendingReview && !baseline[language].isEmpty
+                    && baseline[language] != text[language].cleaned
+            }
+        }
+        set { editOverride = newValue }
+    }
+
+    // Capture a complete entry when an editor changes focus, never its first keystroke.
+    mutating func rememberReviewedText(in language: CardLanguage) {
+        let value = text[language].cleaned
+        var baseline = reviewTextBaseline ?? BilingualText()
+        guard !value.isEmpty, baseline[language].isEmpty else { return }
+        baseline[language] = value
+        reviewTextBaseline = baseline
+    }
+
+    // The first complete selection reflects this reply, including when it replaces an older deadline.
+    mutating func confirmExactTime(_ selection: ConfirmedTime) {
+        if reviewTimeBaseline == nil { reviewTimeBaseline = selection }
+        time = selection
+        useExactTime = true
+    }
+
     var confirmedTime: ConfirmedTime? { useExactTime && kind == .deadline ? time : nil }
 
     var confirmedText: BilingualText {

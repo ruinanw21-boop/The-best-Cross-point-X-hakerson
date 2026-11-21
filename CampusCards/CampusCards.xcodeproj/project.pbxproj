@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		0DFAF2F24FB6B8620050E5FC /* TaskStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB48F6DEBEFB9C0844586D2 /* TaskStore.swift */; };
+		68A1D32C129B43F184626915 /* TaskReadback.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74D81AFB125C4AF982609C22 /* TaskReadback.swift */; };
 		11D6D6230C07EF8367F7BD0C /* ShowCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EFB9C31B236FE3B75E74F6F4 /* ShowCardView.swift */; };
 		40750191D32FE0B3E051690C /* CampusCardsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E93D73B3C233D12AB65D055 /* CampusCardsApp.swift */; };
 		41EE6B06E69ECE8B299EF957 /* TaskStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35D537F2BDF04959350B5616 /* TaskStoreTests.swift */; };
@@ -58,6 +59,7 @@
 		B506C335A68CF9BCE316091A /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		88D4561AF51FA2B5540B8BC8 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		BBB48F6DEBEFB9C0844586D2 /* TaskStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskStore.swift; sourceTree = "<group>"; };
+		74D81AFB125C4AF982609C22 /* TaskReadback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskReadback.swift; sourceTree = "<group>"; };
 		BD3E8F66CCCFA75A798C97D0 /* ConversationTurn.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationTurn.swift; sourceTree = "<group>"; };
 		D245817F3E74CE0052BC327D /* ReviewReplyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewReplyView.swift; sourceTree = "<group>"; };
 		E751F23EC1F540B5C20DFD14 /* TaskListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskListView.swift; sourceTree = "<group>"; };
@@ -133,6 +135,7 @@
 			isa = PBXGroup;
 			children = (
 				BBB48F6DEBEFB9C0844586D2 /* TaskStore.swift */,
+				74D81AFB125C4AF982609C22 /* TaskReadback.swift */,
 			);
 			path = Persistence;
 			sourceTree = "<group>";
@@ -300,6 +303,7 @@
 				A17418BD154D59BA2528B10E /* CampusTask.swift in Sources */,
 				D0CB4214EA0311A43B877531 /* ConversationTurn.swift in Sources */,
 				0DFAF2F24FB6B8620050E5FC /* TaskStore.swift in Sources */,
+				68A1D32C129B43F184626915 /* TaskReadback.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

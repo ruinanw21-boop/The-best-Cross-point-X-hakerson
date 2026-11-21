@@ -25,6 +25,40 @@ struct TaskStore {
         return task
     }
 
+    func listTasks() throws -> [CampusTask] {
+        let tasks = try context.fetch(FetchDescriptor<CampusTask>())
+        return tasks.sorted {
+            if $0.isComplete != $1.isComplete { return !$0.isComplete }
+            if $0.updatedAt != $1.updatedAt { return $0.updatedAt > $1.updatedAt }
+            return $0.id.uuidString < $1.id.uuidString
+        }
+    }
+
+    private func task(withID id: UUID) throws -> CampusTask {
+        var fetch = FetchDescriptor<CampusTask>(predicate: #Predicate { $0.id == id })
+        fetch.fetchLimit = 1
+        guard let task = try context.fetch(fetch).first else { throw Failure.invalidTask }
+        return task
+    }
+
+    func loadTask(_ taskID: UUID) throws -> TaskReadback {
+        let task = try self.task(withID: taskID)
+        let turns = try context.fetch(FetchDescriptor<ConversationTurn>(
+            predicate: #Predicate { $0.taskID == taskID }
+        )).sorted {
+            if $0.confirmedAt != $1.confirmedAt { return $0.confirmedAt < $1.confirmedAt }
+            return $0.id.uuidString < $1.id.uuidString
+        }
+        let items = try context.fetch(FetchDescriptor<ActionItem>(
+            predicate: #Predicate { $0.taskID == taskID }
+        )).sorted {
+            if $0.createdAt != $1.createdAt { return $0.createdAt < $1.createdAt }
+            return $0.id.uuidString < $1.id.uuidString
+        }
+        let groups = Self.actionIDs(for: items, turns: turns)
+        return TaskReadback(task: task, turns: turns, items: items) { groups[$0.id] ?? $0.id }
+    }
+
     @discardableResult
     func confirmReply(_ draft: ReplyDraft) throws -> ConversationTurn {
         let draftID = draft.id
@@ -36,9 +70,7 @@ struct TaskStore {
         }
 
         let taskID = draft.taskID
-        var taskFetch = FetchDescriptor<CampusTask>(predicate: #Predicate { $0.id == taskID })
-        taskFetch.fetchLimit = 1
-        guard let task = try context.fetch(taskFetch).first else { throw Failure.invalidTask }
+        let task = try self.task(withID: taskID)
         guard !draft.original.cleaned.isEmpty else { throw Failure.invalidReply }
         if draft.originalText != nil && !draft.canConfirm { throw Failure.invalidReply }
 
@@ -66,9 +98,11 @@ struct TaskStore {
         if let correction, let field = fields.first {
             correction.revise(from: field, sourceTurnID: turn.id)
         } else {
+            let actionID = UUID()
             for (index, field) in fields.enumerated() {
                 let order = now.addingTimeInterval(Double(index) * 0.000_001)
-                context.insert(ActionItem(taskID: taskID, sourceTurnID: turn.id, field: field, createdAt: order))
+                context.insert(ActionItem(taskID: taskID, actionID: actionID, sourceTurnID: turn.id,
+                                          field: field, createdAt: order))
             }
         }
         task.updatedAt = now
@@ -96,5 +130,40 @@ struct TaskStore {
             context.rollback()
             throw error
         }
+    }
+}
+
+extension TaskStore {
+    /// Older saves timestamped each field exactly one microsecond after the previous field.
+    /// A correction replaced its source turn but preserved this creation timestamp.
+    private static func actionIDs(for items: [ActionItem], turns: [ConversationTurn]) -> [UUID: UUID] {
+        var groups = Dictionary(uniqueKeysWithValues: items.map { ($0.id, $0.actionID ?? $0.id) })
+        guard items.contains(where: { $0.actionID == nil }) else { return groups }
+
+        // Both fetches are scoped to the same task. Only uninterrupted, unique creation
+        // stamps identify an old action after its individual fields have been corrected.
+        let rowsByDate = Dictionary(grouping: items, by: \.createdAt)
+        var originByDate: [Date: Date] = [:]
+        var ambiguous = Set<Date>()
+        for turn in turns where turn.kind == .requirements {
+            var index = 0
+            var stamp = turn.confirmedAt
+            var uniquePrefix = true
+            while let rows = rowsByDate[stamp] {
+                uniquePrefix = uniquePrefix && rows.count == 1
+                if originByDate.updateValue(turn.confirmedAt, forKey: stamp) != nil || !uniquePrefix {
+                    ambiguous.insert(stamp)
+                }
+                index += 1
+                stamp = turn.confirmedAt.addingTimeInterval(Double(index) * 0.000_001)
+            }
+        }
+
+        for row in items where row.actionID == nil {
+            guard let origin = originByDate[row.createdAt], !ambiguous.contains(origin),
+                  !ambiguous.contains(row.createdAt), let first = rowsByDate[origin]?.first else { continue }
+            groups[row.id] = first.actionID ?? first.id
+        }
+        return groups
     }
 }

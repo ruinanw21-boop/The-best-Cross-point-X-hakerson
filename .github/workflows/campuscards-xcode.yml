@@ -72,3 +72,25 @@ jobs:
           name: CampusCards-xcresult-iOS-${{ matrix.ios }}
           path: ${{ runner.temp }}/CampusCards.xcresult
           if-no-files-found: ignore
+
+  readback:
+    name: Export SwiftData readback
+    runs-on: macos-15
+    timeout-minutes: 10
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_16.4.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v4
+      - name: Save demo tasks, reopen their store, and export JSON
+        working-directory: CampusCards
+        run: |
+          xcrun --sdk macosx swiftc -target "$(uname -m)-apple-macosx15.0" -parse-as-library \
+            CampusCards/Models/*.swift CampusCards/Persistence/*.swift \
+            CampusCards/Features/{ReplyDraft,ReplyWorkflow,TranslationClient}.swift \
+            Scripts/ExportTaskReadback.swift -o "$RUNNER_TEMP/export-task-readback"
+          "$RUNNER_TEMP/export-task-readback" > "$RUNNER_TEMP/task-readback.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: task-readback
+          path: ${{ runner.temp }}/task-readback.json
+          if-no-files-found: error
