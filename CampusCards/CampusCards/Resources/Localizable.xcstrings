@@ -232,6 +232,17 @@
         }
       }
     },
+    "Copy translation": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "复制译文"
+          }
+        }
+      }
+    },
     "Correct requirement": {
       "extractionState": "manual",
       "localizations": {
@@ -316,6 +327,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "转写失败，请重试或键入原话。"
+          }
+        }
+      }
+    },
+    "Create a task to show a bilingual question and save the reply.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新建事项，出示双语问题并保存柜台答复。"
           }
         }
       }
@@ -474,6 +496,17 @@
         }
       }
     },
+    "Hold to speak": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按住说话"
+          }
+        }
+      }
+    },
     "Hold to speak Chinese": {
       "extractionState": "manual",
       "localizations": {
@@ -628,6 +661,17 @@
         }
       }
     },
+    "No tasks yet": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂无事项"
+          }
+        }
+      }
+    },
     "No weekday": {
       "extractionState": "manual",
       "localizations": {
@@ -639,17 +683,6 @@
         }
       }
     },
-    "OK": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "好"
-          }
-        }
-      }
-    },
     "Offline speech resources are unavailable. You can type the reply.": {
       "extractionState": "manual",
       "localizations": {
@@ -657,6 +690,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "本地语音模型或分词资源不可用。你仍可键入答复。"
+          }
+        }
+      }
+    },
+    "OK": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "好"
           }
         }
       }
@@ -767,6 +811,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "录音中断。请重新按住麦克风说话，或键入答复。"
+          }
+        }
+      }
+    },
+    "Recording…": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "录音中…"
           }
         }
       }
@@ -925,6 +980,28 @@
         }
       }
     },
+    "Save address": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存地址"
+          }
+        }
+      }
+    },
+    "Save and translate": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存并翻译"
+          }
+        }
+      }
+    },
     "Saved replies will appear here.": {
       "extractionState": "manual",
       "localizations": {
@@ -1002,6 +1079,17 @@
         }
       }
     },
+    "Source language": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "原文语言"
+          }
+        }
+      }
+    },
     "Stop playback": {
       "extractionState": "manual",
       "localizations": {
@@ -1031,6 +1119,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "交换主副语言"
+          }
+        }
+      }
+    },
+    "Swap translation languages": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "交换翻译语言"
+          }
+        }
+      }
+    },
+    "Target language": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "译文语言"
           }
         }
       }
@@ -1167,6 +1277,17 @@
         }
       }
     },
+    "Translate reply": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "翻译答复"
+          }
+        }
+      }
+    },
     "Translate to Chinese": {
       "extractionState": "manual",
       "localizations": {
@@ -1211,6 +1332,39 @@
         }
       }
     },
+    "Translation service": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "翻译服务"
+          }
+        }
+      }
+    },
+    "Translation settings": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "翻译设置"
+          }
+        }
+      }
+    },
+    "Translation will appear here.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "译文会显示在这里。"
+          }
+        }
+      }
+    },
     "Try again": {
       "extractionState": "manual",
       "localizations": {
@@ -1240,6 +1394,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "输入工作人员或同学的原话"
+          }
+        }
+      }
+    },
+    "Use the service base address, without /translate.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请填写服务根地址，省略末尾的 /translate。"
           }
         }
       }

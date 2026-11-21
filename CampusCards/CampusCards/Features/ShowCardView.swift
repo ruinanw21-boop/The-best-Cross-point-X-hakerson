@@ -18,46 +18,45 @@ struct ShowCardView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 22) {
+                VStack(alignment: .leading, spacing: 12) {
                     cardLanguage(primary, prominent: true)
-                    Divider().overlay(CampusStyle.cardInk.opacity(0.12))
                     cardLanguage(primary.other, prominent: false)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(28)
-                .foregroundStyle(CampusStyle.cardInk)
-                .background(CampusStyle.paper, in: RoundedRectangle(cornerRadius: 28))
-                .padding(18)
+                .frame(maxWidth: 560)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 16)
+                .frame(maxWidth: .infinity)
             }
+            .background(Color(uiColor: .systemGroupedBackground))
             .navigationTitle(lang.text(card.title))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(lang.text("Close")) { dismiss() }
                 }
-            }
-            .safeAreaInset(edge: .bottom) {
-                VStack(spacing: 12) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         primary = primary.other
                     } label: {
                         Label(lang.text("Swap card languages"), systemImage: "arrow.up.arrow.down")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.bordered)
-
-                    if let recordReply {
-                        Button(action: recordReply) {
-                            Label(lang.text("Record reply"), systemImage: "plus.bubble")
-                                .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(.borderedProminent)
                     }
                 }
-                .controlSize(.large)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 10)
-                .background(.regularMaterial)
+            }
+            .safeAreaInset(edge: .bottom) {
+                if let recordReply {
+                    Button(action: recordReply) {
+                        Label(lang.text("Translate reply"), systemImage: "character.bubble")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .buttonBorderShape(.capsule)
+                    .controlSize(.large)
+                    .frame(maxWidth: 560)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 10)
+                    .frame(maxWidth: .infinity)
+                    .background(.bar)
+                }
             }
         }
     }
@@ -66,7 +65,7 @@ struct ShowCardView: View {
         VStack(alignment: .leading, spacing: 10) {
             Text(verbatim: cardLanguage.name)
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(CampusStyle.cardInk.opacity(0.75))
+                .foregroundStyle(prominent ? CampusStyle.translationInk : .secondary)
 
             if card.text[cardLanguage].isEmpty {
                 Text(lang.text("Translation needed")).font(.body)
@@ -78,5 +77,9 @@ struct ShowCardView: View {
             }
         }
         .fixedSize(horizontal: false, vertical: true)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(20)
+        .background(prominent ? CampusStyle.translationSurface : CampusStyle.surface,
+                    in: RoundedRectangle(cornerRadius: 24))
     }
 }

@@ -19,12 +19,14 @@ struct ReviewReplyView: View {
     @Environment(\.cardLanguage) private var language
     @AppStorage("translationBaseAddress") private var serviceAddress = ""
     @State private var draft: ReplyDraft
-    @State private var reviewing = false
+    @Environment(\.dynamicTypeSize) private var dynamicType
+    @FocusState private var focusedField: EditorField?
+    @State private var detailsExpanded: Bool
     @State private var followUp: CardContent?
     @State private var saveError = false
     @State private var isSaving = false
     @State private var confirmCancel = false
-    @State private var editingAddress = false
+    @State private var addressEditor: TranslationAddressEditor?
     @StateObject private var capture = ReplyCapture()
     @State private var press: MicrophonePress?
     @State private var recognitionMessage: String?
@@ -36,12 +38,15 @@ struct ReviewReplyView: View {
     let recognize: ReplyRecognizer?
     let onSaved: (UUID) -> Void
 
+    private enum EditorField: Hashable { case source, translation }
+
     init(task: CampusTask, correcting action: ActionItem?, recognize: ReplyRecognizer? = nil,
          onSaved: @escaping (UUID) -> Void = { _ in }) {
         self.task = task
         self.recognize = recognize
         self.onSaved = onSaved
         let id = task.id
+        _detailsExpanded = State(initialValue: action != nil)
         _draft = State(initialValue: ReplyDraft(taskID: id, correcting: action))
         _existingActions = Query(filter: #Predicate<ActionItem> { $0.taskID == id })
     }
@@ -60,54 +65,56 @@ struct ReviewReplyView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                if reviewing {
-                    reviewSections
-                } else {
-                    recordSections
+            ScrollViewReader { scroll in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 14) {
+                        replyContext
+                        languageDirection
+                        sourcePanel
+                        translationPanel.id(EditorField.translation)
+                        replyDetails
+                    }
+                    .frame(maxWidth: 560)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 16)
+                    .frame(maxWidth: .infinity)
+                }
+                .scrollDismissesKeyboard(.interactively)
+                .onChange(of: draft.hasTranslatedCurrentSource) { _, translated in
+                    if translated { scroll.scrollTo(EditorField.translation, anchor: .bottom) }
+                }
+                .onChange(of: draft.translationError) { _, error in
+                    if error != nil { scroll.scrollTo(EditorField.translation, anchor: .bottom) }
                 }
             }
-            .scrollDismissesKeyboard(.interactively)
-            .navigationTitle(lang.text(reviewing ? "Review reply" : "Record reply"))
+            .background(Color(uiColor: .systemGroupedBackground))
+            .navigationTitle(lang.text("Translate reply"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(lang.text(reviewing ? "Back" : "Cancel")) {
-                        if reviewing {
-                            stopWork()
-                            reviewing = false
-                        } else if !hasDraftContent {
-                            close(.discard)
-                        } else {
+                    Button(lang.text("Cancel")) {
+                        if hasDraftContent {
                             confirmCancel = true
+                        } else {
+                            close(.discard)
                         }
                     }
                 }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        Button {
+                            addressEditor = .init(translateOnSave: false)
+                        } label: {
+                            Label(lang.text("Translation service"), systemImage: "network")
+                        }
+                    } label: {
+                        Label(lang.text("Translation settings"), systemImage: "ellipsis.circle")
+                    }
+                    .accessibilityIdentifier("translation-settings")
+                }
                 ToolbarItem(placement: .topBarTrailing) { LanguageMenu() }
             }
-            .safeAreaInset(edge: .bottom) {
-                Button {
-                    if reviewing {
-                        save()
-                    } else {
-                        stopWork()
-                        draft.captureOriginal()
-                        reviewing = true
-                    }
-                } label: {
-                    Text(lang.text(reviewing ? "Confirm and save" : "Review reply"))
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 8)
-                }
-                .buttonStyle(.borderedProminent)
-                .buttonBorderShape(.roundedRectangle(radius: 16))
-                .disabled(isSaving || (reviewing ? !draft.canConfirm : !draft.canReview))
-                .accessibilityIdentifier(reviewing ? "confirm-reply" : "review-reply")
-                .padding(.horizontal, 20)
-                .padding(.vertical, 10)
-                .background(.regularMaterial)
-            }
+            .safeAreaInset(edge: .bottom, spacing: 0) { actionBar }
             .modifier(SaveErrorAlert(presented: $saveError))
             .confirmationDialog(lang.text("Close this draft?"), isPresented: $confirmCancel, titleVisibility: .visible) {
                 Button(lang.text("Keep draft and close")) { close(.keep) }
@@ -116,6 +123,15 @@ struct ReviewReplyView: View {
             }
             .sheet(item: $followUp) { content in
                 ShowCardView(card: content)
+            }
+            .sheet(item: $addressEditor) { editor in
+                TranslationAddressView(address: serviceAddress, translateOnSave: editor.translateOnSave) { address in
+                    if address != serviceAddress && draft.isTranslating { stopWork() }
+                    serviceAddress = address
+                    addressEditor = nil
+                    if editor.translateOnSave { translate(using: address) }
+                }
+                .presentationDetents([.medium, .large])
             }
         }
         .interactiveDismissDisabled(hasDraftContent || press != nil || draft.kind == .correction)
@@ -145,40 +161,134 @@ struct ReviewReplyView: View {
         }
     }
 
-    @ViewBuilder
-    private var recordSections: some View {
-        Section(lang.text("Reply details")) {
+    private var replyContext: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(verbatim: task.title.preferred(lang))
+                .font(.title2.weight(.semibold))
+                .accessibilityAddTraits(.isHeader)
+
             if draft.kind == .correction {
                 Label(lang.text("Correction"), systemImage: "pencil")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
             } else {
-                Picker(lang.text("Reply type"), selection: $draft.kind) {
-                    Text(lang.text("Directions")).tag(ReplyKind.directions)
-                    Text(lang.text("Requirements")).tag(ReplyKind.requirements)
+                Menu {
+                    Picker(lang.text("Reply type"), selection: $draft.kind) {
+                        Text(lang.text("Directions")).tag(ReplyKind.directions)
+                        Text(lang.text("Requirements")).tag(ReplyKind.requirements)
+                    }
+                } label: {
+                    HStack(spacing: 5) {
+                        Text(lang.text(draft.kind.label))
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.caption2.weight(.semibold))
+                    }
+                    .font(.subheadline.weight(.medium))
+                    .frame(minHeight: 44)
+                    .contentShape(Rectangle())
                 }
+                .accessibilityLabel(lang.text("Reply type"))
+                .accessibilityValue(lang.text(draft.kind.label))
                 .accessibilityIdentifier("reply-kind")
             }
-            languagePicker
-            TextField(lang.text("Who replied? (optional)"), text: $draft.speaker)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
 
-        Section(lang.text("Original reply")) {
-            sourceField
-            ForEach([CardLanguage.chinese, .english]) { source in
-                let isHeld = press?.language == source
-                let title = isHeld && capture.isRecording ? "Recording… Release to review."
-                    : (source == .chinese ? "Hold to speak Chinese" : "Hold to speak English")
-                HoldMicrophoneButton(title: lang.text(title), isHeld: isHeld,
-                    hint: lang.text("Double-tap to start or stop recording."),
-                    identifier: source == .chinese ? "microphone-zh" : "microphone-en",
-                    onPress: { beginPress(in: source) }, onRelease: { endPress(in: source) },
-                    onCancel: {
-                        guard press?.language == source else { return }
-                        // The system permission sheet may cancel the touch before the user can lift.
-                        if capture.isRecording { stopWork() } else { endPress(in: source) }
-                    })
-                    .frame(minHeight: 44)
+    private var languageDirection: some View {
+        HStack(spacing: 8) {
+            directionLanguage(draft.language, label: "Source language")
+            Button {
+                stopWork()
+                recognitionMessage = nil
+                draft.language = draft.language.other
+            } label: {
+                Image(systemName: "arrow.left.arrow.right")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(width: 44, height: 44)
+                    .background(CampusStyle.ink.opacity(0.12), in: Circle())
+                    .contentShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.tint)
+            .disabled(press != nil)
+            .accessibilityLabel(lang.text("Swap translation languages"))
+            .accessibilityIdentifier("swap-translation-languages")
+            directionLanguage(draft.language.other, label: "Target language")
+        }
+        .padding(10)
+        .background(CampusStyle.surface, in: RoundedRectangle(cornerRadius: 22))
+    }
+
+    private func directionLanguage(_ choice: CardLanguage, label: String) -> some View {
+        Text(verbatim: choice.name)
+            .font(.subheadline.weight(.semibold))
+            .multilineTextAlignment(.center)
+            .frame(maxWidth: .infinity)
+            .accessibilityLabel(lang.text(label))
+            .accessibilityValue(choice.name)
+    }
+
+    private var sourcePanel: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(lang.text("Original reply"))
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .accessibilityAddTraits(.isHeader)
+
+            TextField(lang.text("Type what they said"), text: Binding(
+                get: { draft.original },
+                set: { updated in
+                    guard draft.original != updated else { return }
+                    draft.original = updated
+                    worker?.cancel()
+                    worker = nil
+                    recognitionMessage = nil
+                }
+            ), axis: .vertical)
+            .font(.title2)
+            .lineLimit(2...8)
+            .focused($focusedField, equals: .source)
+            .disabled(press != nil)
+            .accessibilityIdentifier("original-reply")
+
+            if let reference = draft.recordingRef, press == nil {
+                RecordingPlaybackButton(recordingRef: reference)
+                    .font(.subheadline)
             }
             recognitionFeedback
+
+            Divider()
+            if dynamicType.isAccessibilitySize {
+                VStack(spacing: 8) { microphones }
+            } else {
+                HStack(spacing: 8) { microphones }
+            }
+            if press == nil {
+                Text(lang.text("Hold to speak"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(16)
+        .background(CampusStyle.surface, in: RoundedRectangle(cornerRadius: 24))
+    }
+
+    @ViewBuilder
+    private var microphones: some View {
+        ForEach([CardLanguage.chinese, .english]) { source in
+            let isHeld = press?.language == source
+            let title = isHeld && capture.isRecording ? lang.text("Recording…") : source.name
+            let label = source == .chinese ? "Hold to speak Chinese" : "Hold to speak English"
+            HoldMicrophoneButton(title: title, isHeld: isHeld, label: lang.text(label),
+                hint: lang.text("Double-tap to start or stop recording."),
+                identifier: source == .chinese ? "microphone-zh" : "microphone-en",
+                onPress: { beginPress(in: source) }, onRelease: { endPress(in: source) },
+                onCancel: {
+                    guard press?.language == source else { return }
+                    if capture.isRecording { stopWork() } else { endPress(in: source) }
+                })
+                .frame(maxWidth: .infinity, minHeight: 44)
         }
     }
 
@@ -186,128 +296,181 @@ struct ReviewReplyView: View {
     private var recognitionFeedback: some View {
         if let message = recognitionMessage ?? (press == nil ? nil : capture.issue?.messageKey) {
             Text(lang.text(message))
+                .font(.footnote)
                 .foregroundStyle(.secondary)
                 .accessibilityIdentifier("recognition-error")
-        } else if draft.isRecognizing && reviewing {
+        } else if draft.isRecognizing && press == nil {
             ProgressView(lang.text("Transcribing…"))
+                .font(.footnote)
         }
     }
 
-    private var languagePicker: some View {
-        Picker(lang.text("Reply language"), selection: $draft.language) {
-            ForEach(CardLanguage.allCases) { choice in
-                Text(verbatim: choice.name).tag(choice)
-            }
-        }
-    }
+    private var translationPanel: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text(lang.text(draft.language == .chinese ? "English translation" : "Chinese translation"))
+                    .font(.subheadline.weight(.semibold))
+                    .accessibilityAddTraits(.isHeader)
 
-    private var sourceField: some View {
-        TextField(lang.text("Type what they said"), text: $draft.original, axis: .vertical)
-            .lineLimit(3...8)
-            .accessibilityIdentifier("original-reply")
-    }
+                Spacer()
 
-    @ViewBuilder
-    private var reviewSections: some View {
-        Section(lang.text("Review source text")) {
-            languagePicker
-            sourceField
-            if let reference = draft.recordingRef {
-                RecordingPlaybackButton(recordingRef: reference)
-            }
-            recognitionFeedback
-        }
-
-        Section(lang.text(draft.language == .chinese ? "English translation" : "Chinese translation")) {
-            if serviceAddress.cleaned.isEmpty || editingAddress || draft.translationError == .invalidAddress {
-                TextField(lang.text("Service address"), text: $serviceAddress,
-                          prompt: Text(verbatim: "http://192.168.1.23:8000"))
-                    .keyboardType(.URL)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .accessibilityIdentifier("translation-address")
-                    .onAppear { editingAddress = true }
-                Text(lang.text("Enter the Wi-Fi address and port of the Windows translation service."))
-                    .font(.footnote).foregroundStyle(.secondary)
-            } else {
-                Button(lang.text("Change service address")) { editingAddress = true }
-            }
-
-            Button {
-                translate()
-            } label: {
-                if draft.isTranslating {
-                    HStack {
-                        ProgressView()
-                        Text(lang.text("Translating…"))
+                if draft.hasTranslatedCurrentSource, !draft.translation.cleaned.isEmpty {
+                    Button {
+                        UIPasteboard.general.string = draft.translation
+                    } label: {
+                        Image(systemName: "doc.on.doc")
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
                     }
-                } else {
-                    Label(lang.text(translationButtonTitle), systemImage: "character.bubble")
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(lang.text("Copy translation"))
                 }
             }
-            .disabled(draft.original.cleaned.isEmpty || serviceAddress.cleaned.isEmpty || draft.isTranslating || draft.isRecognizing)
-            .accessibilityIdentifier("translate-reply")
+            .foregroundStyle(CampusStyle.translationInk)
 
-            if let error = draft.translationError {
-                Text(lang.text(translationMessage(error)))
+            if draft.isTranslating {
+                ProgressView(lang.text("Translating…"))
+                    .frame(minHeight: 46, alignment: .leading)
+            } else if let error = draft.translationError {
+                Label(lang.text(translationMessage(error)), systemImage: "exclamationmark.circle")
+                    .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .accessibilityIdentifier("translation-error")
-            }
-
-            if draft.hasTranslatedCurrentSource {
+                if error == .invalidAddress || error == .offline || error == .invalidResponse {
+                    Button(lang.text("Change service address")) {
+                        addressEditor = .init(translateOnSave: true)
+                    }
+                    .font(.subheadline)
+                }
+            } else if draft.hasTranslatedCurrentSource {
                 TextField(lang.text("Edit translation"), text: Binding(
                     get: { draft.translation }, set: { draft.editTranslation($0) }
                 ), axis: .vertical)
-                    .lineLimit(2...6)
-                    .accessibilityIdentifier("reviewed-translation")
-            }
-        }
-        .onChange(of: serviceAddress) { _, _ in
-            if draft.isTranslating { stopWork() }
-        }
-
-        if draft.kind == .directions {
-            Section {
-                Text(lang.text("Directions are saved in the conversation history."))
+                .font(.title2.weight(.medium))
+                .lineLimit(2...8)
+                .focused($focusedField, equals: .translation)
+                .accessibilityIdentifier("reviewed-translation")
+            } else {
+                Text(lang.text("Translation will appear here."))
+                    .font(.body)
                     .foregroundStyle(.secondary)
+                    .frame(minHeight: 46, alignment: .topLeading)
             }
-        } else {
-            ForEach($draft.fields) { $field in
-                Section {
-                    FieldEditor(field: $field)
-                    if field.kind == .material, draft.kind == .requirements,
-                       draft.fields.filter({ $0.kind == .material }).count > 1 {
-                        Button(lang.text("Remove material"), role: .destructive) {
-                            draft.fields.removeAll { $0.id == field.id }
-                        }
-                    }
-                } header: {
-                    Label(lang.text(field.kind.label), systemImage: field.kind.icon)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(CampusStyle.translationSurface, in: RoundedRectangle(cornerRadius: 24))
+    }
+
+    private var actionBar: some View {
+        let saving = draft.hasTranslatedCurrentSource && !draft.translation.cleaned.isEmpty
+            && draft.translationError == nil
+        let title = saving ? "Confirm and save" : translationButtonTitle
+        let icon = saving ? "checkmark" : "character.bubble"
+        return Button {
+            focusedField = nil
+            if saving {
+                save()
+            } else {
+                requestTranslation()
+            }
+        } label: {
+            Group {
+                if draft.isTranslating {
+                    ProgressView().accessibilityLabel(lang.text("Translating…"))
+                } else {
+                    Label(lang.text(title), systemImage: icon)
+                        .font(.headline)
                 }
             }
+            .frame(maxWidth: .infinity, minHeight: 30)
+        }
+        .buttonStyle(.borderedProminent)
+        .buttonBorderShape(.capsule)
+        .controlSize(.large)
+        .disabled(isSaving || press != nil || (saving ? !draft.canConfirm : !canTranslate))
+        .accessibilityIdentifier(saving ? "confirm-reply" : "translate-reply")
+        .frame(maxWidth: 560)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity)
+        .background(.bar)
+    }
 
-            if draft.kind == .requirements {
-                Section {
-                    Button {
-                        draft.fields.append(FieldDraft(kind: .material))
-                    } label: {
-                        Label(lang.text("Add another material"), systemImage: "plus")
-                    }
+    private var replyDetails: some View {
+        DisclosureGroup(isExpanded: $detailsExpanded) {
+            VStack(alignment: .leading, spacing: 14) {
+                TextField(lang.text("Who replied? (optional)"), text: $draft.speaker)
+                if draft.kind != .directions {
+                    requirementFields
                 }
+            }
+            .padding(.top, 12)
+        } label: {
+            Label(lang.text(draft.kind == .directions ? "Reply details" : "Action checklist"),
+                  systemImage: draft.kind == .directions ? "person" : "checklist")
+                .font(.subheadline.weight(.semibold))
+                .frame(minHeight: 44)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 4)
+        .background(CampusStyle.surface, in: RoundedRectangle(cornerRadius: 20))
+        .accessibilityIdentifier("reply-details")
+    }
 
-                if !missing.isEmpty {
-                    Section(lang.text("To ask")) {
-                        ForEach(missing) { kind in
-                            Button {
-                                followUp = .init(title: "Follow-up question", text: kind.question)
-                            } label: {
-                                Label(kind.question.preferred(lang), systemImage: "questionmark.bubble")
-                            }
-                        }
+    @ViewBuilder
+    private var requirementFields: some View {
+        ForEach($draft.fields) { $field in
+            Divider()
+            VStack(alignment: .leading, spacing: 12) {
+                Label(lang.text(field.kind.label), systemImage: field.kind.icon)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .accessibilityAddTraits(.isHeader)
+
+                FieldEditor(field: $field)
+                if field.kind == .material, draft.kind == .requirements,
+                   draft.fields.filter({ $0.kind == .material }).count > 1 {
+                    Button(lang.text("Remove material"), role: .destructive) {
+                        draft.fields.removeAll { $0.id == field.id }
                     }
                 }
             }
         }
+        if draft.kind == .requirements {
+            Button {
+                draft.fields.append(FieldDraft(kind: .material))
+            } label: {
+                Label(lang.text("Add another material"), systemImage: "plus")
+            }
+
+            if !missing.isEmpty {
+                Divider()
+                Text(lang.text("To ask"))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                ForEach(missing) { kind in
+                    Button {
+                        followUp = .init(title: "Follow-up question", text: kind.question)
+                    } label: {
+                        Label(kind.question.preferred(lang), systemImage: "questionmark.bubble")
+                    }
+                }
+            }
+        }
+    }
+
+    private var canTranslate: Bool {
+        !draft.original.cleaned.isEmpty && !draft.isTranslating && !draft.isRecognizing
+    }
+
+    private func requestTranslation() {
+        guard canTranslate else { return }
+        guard (try? TranslationClient(baseAddress: serviceAddress).endpoint()) != nil else {
+            addressEditor = .init(translateOnSave: true)
+            return
+        }
+        translate(using: serviceAddress)
     }
 
     private var translationButtonTitle: String {
@@ -328,17 +491,18 @@ struct ReviewReplyView: View {
         }
     }
 
-    private func translate() {
-        guard let token = draft.beginTranslation() else { return }
+    private func translate(using address: String) {
+        guard !closing, press == nil, canTranslate, let token = draft.beginTranslation() else { return }
         worker?.cancel()
-        editingAddress = false
-        let client = TranslationClient(baseAddress: serviceAddress)
+        let client = TranslationClient(baseAddress: address)
         let text = draft.original
         let source = draft.language
         worker = Task { @MainActor in
             do {
                 let translated = try await client.translate(text: text, source: source)
                 draft.receiveTranslation(translated, for: token)
+            } catch is CancellationError {
+                return
             } catch let error as TranslationServiceError {
                 draft.failTranslation(error, for: token)
             } catch {
@@ -376,7 +540,7 @@ struct ReviewReplyView: View {
             }
             cacheRecording(replacing: previous)
         }
-        reviewing = true
+        focusedField = nil
         let recognizer: ReplyRecognizer = recognize ?? { try await capture.recognize($0, $1) }
         worker = Task { @MainActor in
             do {
@@ -427,7 +591,6 @@ struct ReviewReplyView: View {
             cache.remove(saved)
         } else {
             draft = saved
-            reviewing = saved.originalText != nil || saved.recordingRef != nil
         }
     }
 
@@ -470,15 +633,78 @@ struct ReviewReplyView: View {
     }
 }
 
+private struct TranslationAddressEditor: Identifiable {
+    let id = UUID()
+    let translateOnSave: Bool
+}
+
+private struct TranslationAddressView: View {
+    @Environment(\.cardLanguage) private var language
+    @Environment(\.dismiss) private var dismiss
+    @State var address: String
+    let translateOnSave: Bool
+    let onSave: (String) -> Void
+
+    private var lang: CardLanguage { language.wrappedValue }
+    private var validAddress: Bool {
+        (try? TranslationClient(baseAddress: address).endpoint()) != nil
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextField(lang.text("Service address"), text: $address,
+                              prompt: Text(verbatim: "http://192.168.1.23:8000"))
+                        .keyboardType(.URL)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .accessibilityIdentifier("translation-address")
+                } header: {
+                    Text(lang.text("Service address"))
+                } footer: {
+                    Text(lang.text(address.cleaned.isEmpty || validAddress
+                                   ? "Enter the Wi-Fi address and port of the Windows translation service."
+                                   : "Use the service base address, without /translate."))
+                }
+            }
+            .navigationTitle(lang.text("Translation service"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(lang.text("Cancel")) { dismiss() }
+                }
+            }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                Button {
+                    onSave(address.cleaned)
+                } label: {
+                    Text(lang.text(translateOnSave ? "Save and translate" : "Save address"))
+                        .font(.headline)
+                        .frame(maxWidth: .infinity, minHeight: 30)
+                }
+                .buttonStyle(.borderedProminent)
+                .buttonBorderShape(.capsule)
+                .controlSize(.large)
+                .disabled(!validAddress)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 10)
+                .background(.bar)
+            }
+        }
+    }
+}
+
 private struct MicrophonePress {
     let token: ReplyRequestToken
     let language: CardLanguage
 }
 
-// A control receives touch cancellation as well as release, including inside a scrolling Form.
+// A control receives touch cancellation as well as release, including inside the scrolling editor.
 private struct HoldMicrophoneButton: UIViewRepresentable {
     let title: String
     let isHeld: Bool
+    let label: String
     let hint: String
     let identifier: String
     let onPress: () -> Void
@@ -503,7 +729,17 @@ private struct HoldMicrophoneButton: UIViewRepresentable {
         config.title = title
         config.image = UIImage(systemName: isHeld ? "mic.fill" : "mic")
         config.imagePadding = 8
+        config.cornerStyle = .capsule
+        let foreground = isHeld ? UIColor.systemRed : UIColor(CampusStyle.translationInk)
+        config.baseForegroundColor = foreground
+        config.baseBackgroundColor = foreground
+        config.titleTextAttributesTransformer = .init { attributes in
+            var attributes = attributes
+            attributes.font = UIFont.preferredFont(forTextStyle: .subheadline)
+            return attributes
+        }
         button.configuration = config
+        button.accessibilityLabel = isHeld ? title : label
         button.accessibilityHint = hint
         button.accessibilityIdentifier = identifier
         button.toggleRecording = isHeld ? onRelease : onPress

@@ -86,7 +86,7 @@ struct TranslationClient {
         }
     }
 
-    private func endpoint() throws -> URL {
+    func endpoint() throws -> URL {
         let address = baseAddress.trimmingCharacters(in: .whitespacesAndNewlines)
         guard address.rangeOfCharacter(from: .whitespacesAndNewlines) == nil,
               !address.contains("\\"),

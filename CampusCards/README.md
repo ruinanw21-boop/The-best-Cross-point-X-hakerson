@@ -1,16 +1,16 @@
-# Campus Cards · Reply review
+# Campus Cards · Reply translation
 
 ## English
 
 Open `CampusCards.xcodeproj` in Xcode, select the shared **CampusCards** scheme and an iPhone simulator, and press **⌘R**. The deployment target is iOS 18.0. To run on a physical iPhone, set your development team in **Signing & Capabilities** and use a bundle identifier available to that team.
 
-Before building for offline speech, run `python3 CampusCards/Scripts/prepare_offline_speech.py` from the repository root. This verifies the multilingual base model and tokenizer and places them in the app's bundle resources. Hold either microphone under **Record reply**, release to review, and tap **Play recording** to listen.
+Before building for offline speech, run `python3 CampusCards/Scripts/prepare_offline_speech.py` from the repository root. This verifies the multilingual base model and tokenizer and places them in the app's bundle resources. Open **Translate reply**, hold either microphone, release to transcribe, and tap **Play recording** to listen.
 
 ### Demo walkthrough
 
 1. On the English home screen, choose **New task → Submit enrollment documents → Create task**. Open **Show card** and try **Swap card languages**.
-2. Choose **Record reply → Directions**. Set the reply language to Chinese and enter `去学生服务中心`. Open **Review reply**, enter the Windows service base address in the translation section, and tap **Translate to English**. Edit the result and tap **Confirm and save**.
-3. Record a **Requirements** reply. Enter `周五下午四点前，把护照复印件交到一楼服务台。` In review, check the translation and fill in the fields below. Under **Set an exact time**, choose Friday and set the clock from 4:00 p.m. to 3:30 p.m. Confirm and save.
+2. Choose **Translate reply → Directions**. Set the source language to Chinese and enter `去学生服务中心`. Tap **Translate to English**. On first use, enter the Windows service base address and tap **Save and translate**. Edit the result and tap **Confirm and save**.
+3. Record a **Requirements** reply. Enter `周五下午四点前，把护照复印件交到一楼服务台。` In review, check the translation and expand **Action checklist** to fill in the fields. Under **Set an exact time**, choose Friday and set the clock from 4:00 p.m. to 3:30 p.m. Confirm and save.
 4. Relaunch the app and open the task. The checklist should say **By 3:30 p.m. on Friday** and **周五下午三点半前**. The original reply should still say **四点**.
 5. Create **Collect lost property**. Save a requirements reply with only the library reception location. Open the **What do I need to bring?** card and save a second reply with **Student ID / 学生证**. Check the item, complete the task, then reopen it.
 6. Try the globe menu mid-reply. The current draft should stay open and the selected interface language should persist across launches.
@@ -30,8 +30,8 @@ The app keeps pending replies and confirmed history on the device. Requesting a 
 ### 演示流程
 
 1. 从英文首页新建「补交入学材料」，出示大字问句，再交换中英文顺序。
-2. 选择「记录答复 → 指路」，把答复语言设为中文，输入「去学生服务中心」。点「核对答复」，填写 Windows 服务地址，然后点「翻译成英文」。检查或编辑译文后点「确认并保存」。
-3. 再录入一轮「办事要求」原话「周五下午四点前，把护照复印件交到一楼服务台。」检查译文，并按上表手填双语材料和地点。打开「设置明确时间」，选择周五，把 16:00 改成 15:30 后保存。
+2. 选择「翻译答复 → 指路」，把原文语言设为中文，输入「去学生服务中心」。点「翻译成英文」，首次使用时填写 Windows 服务地址，再点「保存并翻译」。检查或编辑译文后点「确认并保存」。
+3. 再录入一轮「办事要求」原话「周五下午四点前，把护照复印件交到一楼服务台。」检查译文，展开「行动清单」，按上表手填双语材料和地点。打开「设置明确时间」，选择周五，把 16:00 改成 15:30 后保存。
 4. 重启 App 后打开该事项，清单中英文应显示下午三点半，历史原话仍保留「四点」。
 5. 新建「领取失物」，先确认图书馆前台，再出示追问卡并补录学生证。勾选学生证、办结，再重新打开事项。
 6. 录到一半时用地球图标切换界面语言，继续编辑原草稿。重启后检查语言偏好。
@@ -47,11 +47,11 @@ python3 CampusCards/Scripts/prepare_offline_speech.py
 python3 CampusCards/Scripts/prepare_offline_speech.py --verify-only
 ```
 
-模型使用 [Argmax 的 openai_whisper-base](https://huggingface.co/argmaxinc/whisperkit-coreml/tree/0f63a7800b00dd0226abd051b906c246e1907482/openai_whisper-base)，分词资源来自 [OpenAI 的 whisper-base](https://huggingface.co/openai/whisper-base/tree/e37978b90ca9030d5170a5c07aadb050351a65bb)。App target 固定使用 [WhisperKit v1.1.1](https://github.com/argmaxinc/argmax-oss-swift/tree/v1.1.1)。如果构建时漏装资源，核对页会显示提示，仍可回听和手动键入。
+模型使用 [Argmax 的 openai_whisper-base](https://huggingface.co/argmaxinc/whisperkit-coreml/tree/0f63a7800b00dd0226abd051b906c246e1907482/openai_whisper-base)，分词资源来自 [OpenAI 的 whisper-base](https://huggingface.co/openai/whisper-base/tree/e37978b90ca9030d5170a5c07aadb050351a65bb)。App target 固定使用 [WhisperKit v1.1.1](https://github.com/argmaxinc/argmax-oss-swift/tree/v1.1.1)。如果构建时漏装资源，翻译页会显示提示，仍可回听和手动键入。
 
 **在 iPhone 上分两步验收**
 
-1. 安装已预置资源的 App，开启飞行模式并关闭 Wi-Fi，完全退出再冷启动。在事项 A 的「记录答复」按住中文麦克风，说“请到一楼服务台”。松开后，在核对页回听、改一个字，返回并保留草稿。另建事项 B，按住英文麦克风说 “Which desk should I go to?”，同样回听和核对。分别打开两张草稿检查原音。首次出现麦克风授权弹窗时，授权后再按住录音。也可在系统设置中关闭麦克风权限，检查已有文字仍能编辑并进入核对页。
+1. 安装已预置资源的 App，开启飞行模式并关闭 Wi-Fi，完全退出再冷启动。在事项 A 的「翻译答复」按住中文麦克风，说“请到一楼服务台”。松开后，在翻译页回听、改一个字，返回并保留草稿。另建事项 B，按住英文麦克风说 “Which desk should I go to?”，同样回听和核对。分别打开两张草稿检查原音。首次出现麦克风授权弹窗时，授权后再按住录音。也可在系统设置中关闭麦克风权限，检查已有文字仍能编辑并进入翻译页。
 2. 恢复 Wi-Fi，打开其中一张草稿，用下方 05 的方法配置 Windows 翻译服务。发起翻译、核对并「确认并保存」，完全退出 App 再打开。在原事项的「交流记录」回听，确认播放的是对应语句，也能查到修改后的原文和译文。记录设备型号、iOS 版本及两轮实际转写。
 
 `TaskDetailView → ReviewReplyView → ReplyCapture.recognize` 使用 PR #9 的 `ReplyRecognizer`。按下麦克风固定事项、草稿、版本和源语言，松开时交付录音。编辑或切换草稿后，旧转写返回时不会写入。每轮创建独立的 `Application Support/Recordings/<UUID>.wav` 文件。草稿及历史仅存相对路径，例如 `Recordings/7F9C309A-2447-4FAC-86FF-F89B226008B5.wav`。键入的答复可以没有录音。
@@ -66,8 +66,8 @@ python3 CampusCards/Scripts/prepare_offline_speech.py --verify-only
    .\.venv\Scripts\python.exe -m translation_service.iphone_check --host $wifiIP --phone $phoneIP
    ```
 
-2. 用 Xcode 将本分支的 CampusCards 安装到 iPhone。进入「事项详情 → 记录答复 → 核对答复」，在译文区输入服务根地址，例如 `http://192.168.1.23:8000`，用实际电脑地址替换示例 IP。点翻译后允许 App 访问本地网络。地址可以在「更改服务地址」中修改。智谱密钥由 Windows 服务读取。
-3. 第一轮选 English，键入 “Which desk should I go to?”，点「翻译成中文」。修改一处译文，返回上一页，选「取消 → 保留草稿并关闭」。「交流记录」此时应维持原来的条数。重新打开「记录答复」，核对修改仍在，再点「确认并保存」。
+2. 用 Xcode 将本分支的 CampusCards 安装到 iPhone。进入「事项详情 → 翻译答复」，录入原文后点「翻译成英文」或「翻译成中文」。首次使用时输入服务根地址，例如 `http://192.168.1.23:8000`，用实际电脑地址替换示例 IP。点「保存并翻译」后允许 App 访问本地网络。可通过右上角更多菜单中的「翻译服务」修改地址。智谱密钥由 Windows 服务读取。
+3. 第一轮选 English，键入 “Which desk should I go to?”，点「翻译成中文」。修改一处译文，选「取消 → 保留草稿并关闭」。「交流记录」此时应维持原来的条数。重新打开「翻译答复」，核对修改仍在，再点「确认并保存」。
 4. 第二轮选「简体中文」，键入“请把护照复印件交到一楼服务台”，点「翻译成英文」。确认后退出并重开 App，原事项应有两轮新答复，各自保留核对后的译文。改过原文的记录可展开「最初原话」。
 5. 验证重试时，先停掉 Windows 服务，再发起翻译。原文和行动字段应可继续编辑。用同一地址重启服务，点「重试翻译」，然后确认保存。
 

@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 private struct CardLanguageKey: EnvironmentKey {
     static let defaultValue: Binding<CardLanguage> = .constant(.english)
@@ -13,6 +14,17 @@ extension EnvironmentValues {
 
 enum CampusStyle {
     static let ink = Color(.sRGB, red: 0.27, green: 0.25, blue: 0.76)
+    static let surface = Color(uiColor: .secondarySystemGroupedBackground)
+    static let translationSurface = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.15, green: 0.13, blue: 0.25, alpha: 1)
+            : UIColor(red: 0.91, green: 0.90, blue: 0.99, alpha: 1)
+    })
+    static let translationInk = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.76, green: 0.73, blue: 1.0, alpha: 1)
+            : UIColor(red: 0.27, green: 0.25, blue: 0.76, alpha: 1)
+    })
     static let cardInk = Color(.sRGB, red: 0.12, green: 0.12, blue: 0.27)
     static let paper = Color(.sRGB, red: 0.95, green: 0.94, blue: 1.0)
 }

@@ -50,30 +50,20 @@ struct TaskListView: View {
 
     private var emptyState: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                VStack(alignment: .leading, spacing: 18) {
-                    Image(systemName: "text.bubble")
-                        .font(.system(size: 33, weight: .medium))
-                        .padding(13)
-                        .background(.white.opacity(0.85), in: RoundedRectangle(cornerRadius: 18))
-                        .accessibilityHidden(true)
-
-                    Text(lang.text("Ask at the desk.\nKeep the answer."))
-                        .font(.largeTitle.weight(.bold))
-                        .accessibilityAddTraits(.isHeader)
-
-                    Text(lang.text("Show a question in Chinese and save the next steps in both languages."))
-                        .font(.body)
+            VStack(spacing: 8) {
+                ContentUnavailableView {
+                    Label(lang.text("No tasks yet"), systemImage: "text.bubble")
+                } description: {
+                    Text(lang.text("Create a task to show a bilingual question and save the reply."))
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(26)
-                .foregroundStyle(CampusStyle.cardInk)
-                .background(CampusStyle.paper, in: RoundedRectangle(cornerRadius: 28))
                 newTaskButton
+                    .padding(.horizontal, 24)
             }
-            .padding(.horizontal, 20)
+            .frame(maxWidth: 440)
+            .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
         }
+        .background(Color(uiColor: .systemGroupedBackground))
     }
 
     private var newTaskButton: some View {
@@ -86,7 +76,7 @@ struct TaskListView: View {
                 .padding(.vertical, 8)
         }
         .buttonStyle(.borderedProminent)
-        .buttonBorderShape(.roundedRectangle(radius: 16))
+        .buttonBorderShape(.capsule)
         .accessibilityIdentifier("new-task")
     }
 
@@ -146,7 +136,10 @@ private struct TaskRow: View {
             .padding(.vertical, 5)
         } icon: {
             Image(systemName: task.isComplete ? "checkmark.circle.fill" : task.scenario.icon)
-                .foregroundStyle(CampusStyle.ink)
+                .font(.body.weight(.semibold))
+                .frame(width: 34, height: 34)
+                .foregroundStyle(CampusStyle.translationInk)
+                .background(CampusStyle.translationSurface, in: RoundedRectangle(cornerRadius: 10))
                 .accessibilityHidden(true)
         }
     }

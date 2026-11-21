@@ -116,7 +116,8 @@ struct TaskDetailView: View {
                 lang.text(task.isComplete ? "Completed" : "In progress"),
                 systemImage: task.isComplete ? "checkmark.circle.fill" : task.scenario.icon
             )
-            .font(.caption.weight(.semibold))
+            .font(.subheadline.weight(.medium))
+            .foregroundStyle(CampusStyle.translationInk)
 
             Text(verbatim: task.title.preferred(lang))
                 .font(.title.weight(.bold))
@@ -129,27 +130,26 @@ struct TaskDetailView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(20)
-        .foregroundStyle(CampusStyle.cardInk)
-        .background(CampusStyle.paper, in: RoundedRectangle(cornerRadius: 24))
+        .background(CampusStyle.surface, in: RoundedRectangle(cornerRadius: 24))
     }
 
     @ViewBuilder
     private var headerButtons: some View {
         Button {
-            card = .init(title: "Question card", text: task.question)
-        } label: {
-            Label(lang.text("Show card"), systemImage: "text.bubble")
-        }
-        .buttonStyle(.borderedProminent)
-        .accessibilityIdentifier("show-question")
-
-        Button {
             reply = .init()
         } label: {
-            Label(lang.text("Record reply"), systemImage: "plus.bubble")
+            Label(lang.text("Translate reply"), systemImage: "character.bubble")
+        }
+        .buttonStyle(.borderedProminent)
+        .accessibilityIdentifier("record-reply")
+
+        Button {
+            card = .init(title: "Question card", text: task.question)
+        } label: {
+            Label(lang.text("Show card"), systemImage: "text.rectangle")
         }
         .buttonStyle(.bordered)
-        .accessibilityIdentifier("record-reply")
+        .accessibilityIdentifier("show-question")
     }
 
     private func actionRow(_ item: ActionItem) -> some View {
@@ -214,7 +214,9 @@ struct TaskDetailView: View {
             }
 
             Text(verbatim: turn.original)
+                .font(.body)
                 .environment(\.locale, turn.originalLanguage.locale)
+                .textSelection(.enabled)
                 .accessibilityIdentifier("history-original")
 
             if let initial = turn.originalText, initial != turn.original {
@@ -227,10 +229,18 @@ struct TaskDetailView: View {
             }
 
             if !turn.translation.isEmpty {
-                Text(verbatim: turn.translation)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .environment(\.locale, turn.originalLanguage.other.locale)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(verbatim: turn.originalLanguage.other.name)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(CampusStyle.translationInk)
+                    Text(verbatim: turn.translation)
+                        .font(.body.weight(.medium))
+                        .environment(\.locale, turn.originalLanguage.other.locale)
+                        .textSelection(.enabled)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(12)
+                .background(CampusStyle.translationSurface, in: RoundedRectangle(cornerRadius: 14))
             }
 
             if let reference = turn.recordingRef {
