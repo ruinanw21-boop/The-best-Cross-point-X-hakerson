@@ -19,7 +19,7 @@ struct CampusCardsApp: App {
                     ProgressView().task { loadStore() }
                 }
             }
-            .tint(CampusStyle.ink)
+            .tint(CampusStyle.accent)
             .environment(\.cardLanguage, language)
             .environment(\.locale, language.wrappedValue.locale)
         }

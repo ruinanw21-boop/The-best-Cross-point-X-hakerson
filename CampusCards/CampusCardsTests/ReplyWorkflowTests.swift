@@ -43,6 +43,33 @@ final class ReplyWorkflowTests: XCTestCase {
         XCTAssertFalse(draft.canConfirm)
     }
 
+    func testManualTranslationRequiresExplicitReviewAndSurvivesReopening() throws {
+        var draft = ReplyDraft(taskID: UUID())
+        draft.original = "周五 16:00 前"
+        XCTAssertFalse(draft.acceptManualTranslation("   "))
+        XCTAssertFalse(draft.canConfirm)
+        let pending = try XCTUnwrap(draft.beginTranslation())
+
+        XCTAssertTrue(draft.acceptManualTranslation("By 4 p.m. on Friday"))
+        XCTAssertFalse(draft.hasTranslatedCurrentSource)
+        XCTAssertTrue(draft.canConfirm)
+        XCTAssertFalse(draft.receiveTranslation("Late result", for: pending))
+        XCTAssertFalse(draft.failTranslation(.timeout, for: pending))
+        XCTAssertEqual(draft.translation, "By 4 p.m. on Friday")
+        XCTAssertEqual(draft.originalText, "周五 16:00 前")
+
+        var restored = try JSONDecoder().decode(ReplyDraft.self, from: JSONEncoder().encode(draft))
+        XCTAssertTrue(restored.canConfirm)
+        XCTAssertFalse(restored.hasTranslatedCurrentSource)
+        restored.original = "周五 15:30 前"
+        XCTAssertFalse(restored.canConfirm)
+        XCTAssertTrue(restored.translation.isEmpty)
+        XCTAssertTrue(restored.acceptManualTranslation("By 3:30 p.m. on Friday"))
+        restored.language = .english
+        XCTAssertFalse(restored.hasReviewedTranslation)
+        XCTAssertFalse(restored.canConfirm)
+    }
+
     func testLateSuccessAndErrorCannotReplaceEditedSourceOrTranslation() throws {
         var draft = ReplyDraft(taskID: UUID())
         draft.original = "周五 16:00 前"

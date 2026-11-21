@@ -2,15 +2,13 @@ import SwiftData
 import SwiftUI
 
 struct TaskListView: View {
+    @Environment(\.modelContext) private var context
     @Environment(\.cardLanguage) private var language
+    @Environment(\.dynamicTypeSize) private var dynamicType
     @Query(sort: \CampusTask.updatedAt, order: .reverse) private var tasks: [CampusTask]
     @State private var path: [Route] = []
-    @State private var filter: TaskFilter = .active
-
-    private enum TaskFilter: String, CaseIterable {
-        case active = "In progress"
-        case completed = "Completed"
-    }
+    @State private var showingCompleted = false
+    @State private var saveError = false
 
     private enum Route: Hashable {
         case prepare
@@ -18,67 +16,106 @@ struct TaskListView: View {
     }
 
     private var lang: CardLanguage { language.wrappedValue }
+    private var visibleTasks: [CampusTask] { tasks.filter { $0.isComplete == showingCompleted } }
 
     var body: some View {
         NavigationStack(path: $path) {
-            CampusPage {
-                if tasks.isEmpty {
-                    emptyState("No tasks yet", icon: "text.bubble",
-                               description: "Create a task to show a bilingual question and save the reply.")
-                } else {
-                    taskBrowser
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    masthead
+                    hero
+                    taskFeed
                 }
+                .deskPage()
             }
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                CampusPrimaryAction(title: lang.text("New task"), icon: "plus") {
-                    path.append(.prepare)
-                }
-                .accessibilityIdentifier("new-task")
-                .campusActionBar()
-            }
-            .navigationTitle(lang.text("My tasks"))
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) { LanguageMenu() }
-            }
+            .background(CampusStyle.canvas.ignoresSafeArea())
+            .modifier(SaveErrorAlert(presented: $saveError))
+            .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: Route.self) { route in
                 switch route {
                 case .prepare:
                     PrepareCardView { task in
-                        filter = .active
+                        showingCompleted = false
                         path = [.task(task.id)]
                     }
+                    .toolbar(.visible, for: .navigationBar)
                 case .task(let id):
                     if let task = tasks.first(where: { $0.id == id }) {
                         TaskDetailView(task: task)
+                            .toolbar(.visible, for: .navigationBar)
                     }
                 }
             }
         }
     }
 
-    private var taskBrowser: some View {
-        let matchingTasks = tasks.filter { $0.isComplete == (filter == .completed) }
-        return VStack(spacing: 16) {
-            Picker(lang.text("Task status"), selection: $filter) {
-                ForEach(TaskFilter.allCases, id: \.self) { option in
-                    Text(lang.text(option.rawValue)).tag(option)
+    private var masthead: some View {
+        HStack(spacing: 10) {
+            DeskMark()
+            Text(lang.text("Campus Cards"))
+                .font(.headline.weight(.bold))
+                .foregroundStyle(CampusStyle.ticketInk)
+                .accessibilityAddTraits(.isHeader)
+            Spacer(minLength: 8)
+            LanguageMenu()
+                .labelStyle(.iconOnly)
+                .frame(width: 44, height: 44)
+                .background(CampusStyle.paper, in: Circle())
+        }
+    }
+
+    private var hero: some View {
+        VStack(alignment: .leading, spacing: 13) {
+            Label(lang.text("At the campus desk"), systemImage: "mappin.and.ellipse")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(CampusStyle.signal)
+            Text(lang.text("Take the question with you."))
+                .font(.largeTitle.weight(.bold))
+                .foregroundStyle(.white)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityAddTraits(.isHeader)
+            Text(lang.text("Show your question in Chinese. Keep the answer in both languages."))
+                .font(.subheadline)
+                .foregroundStyle(.white.opacity(0.92))
+                .fixedSize(horizontal: false, vertical: true)
+            HStack {
+                Button {
+                    path.append(.prepare)
+                } label: {
+                    Label(lang.text("New task"), systemImage: "plus")
+                }
+                .buttonStyle(DeskButtonStyle(tone: .signal))
+                .accessibilityIdentifier("new-task")
+                if !dynamicType.isAccessibilitySize {
+                    Spacer(minLength: 10)
+                    DeskRouteGraphic().frame(width: 94, height: 52)
                 }
             }
-            .pickerStyle(.segmented)
-            .accessibilityIdentifier("task-status-filter")
+            .padding(.top, 5)
+        }
+        .padding(21)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(CampusStyle.actionFill, in: RoundedRectangle(cornerRadius: 26))
+    }
 
-            if matchingTasks.isEmpty {
-                if filter == .active {
-                    emptyState("No tasks in progress", icon: "tray")
-                } else {
-                    emptyState("No completed tasks", icon: "checkmark.circle")
+    private var taskFeed: some View {
+        VStack(alignment: .leading, spacing: 15) {
+            DeskHeading(title: lang.text("My tasks"))
+            if !tasks.isEmpty {
+                Picker(lang.text("Task status"), selection: $showingCompleted) {
+                    Text(lang.text("In progress")).tag(false)
+                    Text(lang.text("Completed")).tag(true)
                 }
+                .pickerStyle(.segmented)
+            }
+            if visibleTasks.isEmpty {
+                emptyState
             } else {
-                LazyVStack(spacing: 10) {
-                    ForEach(matchingTasks) { task in
+                LazyVStack(alignment: .leading, spacing: 0) {
+                    ForEach(visibleTasks) { task in
+                        if task.id != visibleTasks.first?.id { TicketRule() }
                         NavigationLink(value: Route.task(task.id)) {
                             TaskRow(task: task)
-                                .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
                     }
@@ -87,11 +124,35 @@ struct TaskListView: View {
         }
     }
 
-    private func emptyState(_ title: String, icon: String, description: String? = nil) -> some View {
-        ContentUnavailableView {
-            Label(lang.text(title), systemImage: icon)
-        } description: {
-            if let description { Text(lang.text(description)) }
+    private var emptyState: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(lang.text(showingCompleted ? "No completed tasks yet" : "No tasks in progress"))
+                .font(.headline)
+                .foregroundStyle(CampusStyle.ticketInk)
+            if tasks.isEmpty {
+                Text(lang.text("Not sure where to start? Try the enrollment example."))
+                    .font(.subheadline)
+                    .foregroundStyle(CampusStyle.muted)
+                Button(lang.text("Add enrollment example"), action: addEnrollmentExample)
+                    .buttonStyle(DeskButtonStyle(tone: .soft))
+                    .padding(.top, 4)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 9)
+    }
+
+    private func addEnrollmentExample() {
+        let scenario = TaskScenario.enrollment
+        let fields = RequirementKind.allCases.filter(scenario.defaultFields.contains)
+        do {
+            let task = try TaskStore(context: context).createTask(
+                scenario: scenario, title: scenario.title, question: scenario.question(asking: fields), fields: fields
+            )
+            showingCompleted = false
+            path = [.task(task.id)]
+        } catch {
+            saveError = true
         }
     }
 }
@@ -109,9 +170,9 @@ private struct TaskRow: View {
         _turns = Query(filter: #Predicate<ConversationTurn> { $0.taskID == id }, sort: \ConversationTurn.confirmedAt, order: .reverse)
     }
 
-    private var nextStep: String? {
+    private var nextStep: String {
         let lang = language.wrappedValue
-        if task.isComplete { return nil }
+        if task.isComplete { return lang.text("Completed") }
         if let material = actions.first(where: { $0.kind == .material && !$0.isChecked }) {
             return material.text.preferred(lang)
         }
@@ -130,32 +191,28 @@ private struct TaskRow: View {
     }
 
     var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: task.isComplete ? "checkmark.circle.fill" : task.scenario.icon)
+        HStack(alignment: .center, spacing: 13) {
+            Image(systemName: task.isComplete ? "checkmark" : task.scenario.icon)
                 .font(.body.weight(.semibold))
-                .frame(width: 40, height: 40)
-                .foregroundStyle(CampusStyle.translationInk)
-                .background(CampusStyle.translationSurface, in: RoundedRectangle(cornerRadius: 12))
+                .foregroundStyle(CampusStyle.accent)
+                .frame(width: 44, height: 44)
+                .background(CampusStyle.mist, in: RoundedRectangle(cornerRadius: 14))
                 .accessibilityHidden(true)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(verbatim: task.title.preferred(language.wrappedValue)).font(.headline)
-                if let nextStep {
-                    Text(verbatim: nextStep).font(.subheadline).foregroundStyle(.secondary)
-                } else {
-                    Text(task.updatedAt, format: .dateTime.month().day())
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
+            VStack(alignment: .leading, spacing: 5) {
+                Text(verbatim: task.title.preferred(language.wrappedValue))
+                    .font(.headline)
+                    .foregroundStyle(CampusStyle.ticketInk)
+                Text(verbatim: nextStep)
+                    .font(.subheadline)
+                    .foregroundStyle(CampusStyle.muted)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-
             Image(systemName: "chevron.right")
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(.secondary)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(CampusStyle.accent)
                 .accessibilityHidden(true)
         }
-        .campusPanel()
-        .accessibilityElement(children: .combine)
+        .padding(.vertical, 13)
+        .contentShape(Rectangle())
     }
 }

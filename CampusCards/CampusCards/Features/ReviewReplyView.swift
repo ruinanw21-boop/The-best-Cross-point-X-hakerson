@@ -23,6 +23,8 @@ struct ReviewReplyView: View {
     @FocusState private var focusedField: EditorField?
     @State private var detailsExpanded: Bool
     @State private var followUp: CardContent?
+    @State private var editingField: FieldDraft?
+    @State private var manualTranslation: ManualTranslationEditor?
     @State private var saveError = false
     @State private var isSaving = false
     @State private var confirmCancel = false
@@ -75,7 +77,7 @@ struct ReviewReplyView: View {
                         replyDetails
                     }
                 }
-                .onChange(of: draft.hasTranslatedCurrentSource) { _, translated in
+                .onChange(of: draft.hasReviewedTranslation) { _, translated in
                     if translated { scroll.scrollTo(EditorField.translation, anchor: .bottom) }
                 }
                 .onChange(of: draft.translationError) { _, error in
@@ -117,6 +119,16 @@ struct ReviewReplyView: View {
             }
             .sheet(item: $followUp) { content in
                 ShowCardView(card: content)
+            }
+            .sheet(item: $editingField) { field in
+                requirementEditor(for: field)
+            }
+            .sheet(item: $manualTranslation) { editor in
+                ManualTranslationSheet(editor: editor) { text in
+                    stopWork()
+                    draft.acceptManualTranslation(text)
+                    manualTranslation = nil
+                }
             }
             .sheet(item: $addressEditor) { editor in
                 TranslationAddressView(address: serviceAddress, translateOnSave: editor.translateOnSave) { address in
@@ -286,7 +298,7 @@ struct ReviewReplyView: View {
 
                 Spacer()
 
-                if draft.hasTranslatedCurrentSource, !draft.translation.cleaned.isEmpty {
+                if draft.hasReviewedTranslation, !draft.translation.cleaned.isEmpty {
                     Button {
                         UIPasteboard.general.string = draft.translation
                     } label: {
@@ -298,15 +310,17 @@ struct ReviewReplyView: View {
                     .accessibilityLabel(lang.text("Copy translation"))
                 }
             }
-            .foregroundStyle(CampusStyle.translationInk)
+            .foregroundStyle(CampusStyle.accent)
 
             if draft.isTranslating {
                 ProgressView(lang.text("Translating…"))
                     .frame(minHeight: 46, alignment: .leading)
-            } else if let error = draft.translationError {
+            }
+
+            if let error = draft.translationError {
                 Label(lang.text(translationMessage(error)), systemImage: "exclamationmark.circle")
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(CampusStyle.muted)
                     .accessibilityIdentifier("translation-error")
                 if error == .invalidAddress || error == .offline || error == .invalidResponse {
                     Button(lang.text("Change service address")) {
@@ -314,27 +328,46 @@ struct ReviewReplyView: View {
                     }
                     .font(.subheadline)
                 }
-            } else if draft.hasTranslatedCurrentSource {
+            }
+
+            if draft.hasReviewedTranslation {
                 TextField(lang.text("Edit translation"), text: Binding(
                     get: { draft.translation }, set: { draft.editTranslation($0) }
                 ), axis: .vertical)
-                .font(.title2.weight(.medium))
+                .font(.body)
                 .lineLimit(2...8)
                 .focused($focusedField, equals: .translation)
+                .disabled(draft.isTranslating || draft.isRecognizing || press != nil)
                 .accessibilityIdentifier("reviewed-translation")
-            } else {
+                if !draft.hasTranslatedCurrentSource {
+                    Label(lang.text("Manually reviewed"), systemImage: "checkmark.circle")
+                        .font(.caption)
+                        .foregroundStyle(CampusStyle.accent)
+                }
+            } else if !draft.isTranslating && draft.translationError == nil {
                 Text(lang.text("Translation will appear here."))
-                    .font(.body)
-                    .foregroundStyle(.secondary)
-                    .frame(minHeight: 46, alignment: .topLeading)
+                    .foregroundStyle(CampusStyle.muted)
+            }
+
+            Button(lang.text("Enter translation manually")) {
+                focusedField = nil
+                stopWork()
+                manualTranslation = .init(text: draft.translation, target: draft.language.other)
+            }
+            .buttonStyle(DeskButtonStyle(tone: .soft))
+            .disabled(draft.original.cleaned.isEmpty || press != nil || draft.isRecognizing)
+
+            if draft.hasReviewedTranslation {
+                Button(lang.text(translationButtonTitle), action: requestTranslation)
+                    .font(.subheadline)
+                    .disabled(!canTranslate || press != nil)
             }
         }
         .campusPanel(highlighted: true)
     }
 
     private var actionBar: some View {
-        let saving = draft.hasTranslatedCurrentSource && !draft.translation.cleaned.isEmpty
-            && draft.translationError == nil
+        let saving = draft.hasReviewedTranslation && !draft.translation.cleaned.isEmpty
         let title = draft.isTranslating ? "Translating…" : (saving ? "Confirm and save" : translationButtonTitle)
         return CampusPrimaryAction(title: lang.text(title), icon: saving ? "checkmark" : "character.bubble",
                                    isBusy: draft.isTranslating) {
@@ -371,29 +404,35 @@ struct ReviewReplyView: View {
 
     @ViewBuilder
     private var requirementFields: some View {
-        ForEach($draft.fields) { $field in
-            Divider()
+        let fields = CampusStyle.ticketOrder.flatMap { kind in draft.fields.filter { $0.kind == kind } }
+        TicketSurface {
             VStack(alignment: .leading, spacing: 12) {
-                Label(lang.text(field.kind.label), systemImage: field.kind.icon)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .accessibilityAddTraits(.isHeader)
-
-                FieldEditor(field: $field)
-                if field.kind == .material, draft.kind == .requirements,
-                   draft.fields.filter({ $0.kind == .material }).count > 1 {
-                    Button(lang.text("Remove material"), role: .destructive) {
-                        draft.fields.removeAll { $0.id == field.id }
+                ForEach(fields) { field in
+                    if field.id != fields.first?.id { TicketRule() }
+                    let needsAnswer = missing.contains(field.kind)
+                    let layout = dynamicType.isAccessibilitySize
+                        ? AnyLayout(VStackLayout(alignment: .leading)) : AnyLayout(HStackLayout(alignment: .top))
+                    layout {
+                        TicketField(kind: field.kind, text: field.effectiveText,
+                                    emptyKey: needsAnswer ? "To ask" : "Not added in this reply",
+                                    pending: needsAnswer, edited: field.wasEditedDuringReview == true)
+                        Button(lang.text(field.effectiveText.isEmpty ? "Add" : "Edit")) {
+                            editingField = field
+                        }
+                        .frame(minWidth: 44, minHeight: 44)
+                        .accessibilityLabel(Text(verbatim: "\(lang.text(field.kind.label)): \(lang.text(field.effectiveText.isEmpty ? "Add" : "Edit"))"))
+                        .accessibilityIdentifier("review-field-\(field.kind.rawValue)")
                     }
                 }
             }
         }
         if draft.kind == .requirements {
             Button {
-                draft.fields.append(FieldDraft(kind: .material))
+                editingField = FieldDraft(kind: .material)
             } label: {
                 Label(lang.text("Add another material"), systemImage: "plus")
             }
+            .buttonStyle(DeskButtonStyle(tone: .soft))
 
             if !missing.isEmpty {
                 Divider()
@@ -408,6 +447,21 @@ struct ReviewReplyView: View {
                     }
                 }
             }
+        }
+    }
+
+    private func requirementEditor(for field: FieldDraft) -> some View {
+        let exists = draft.fields.contains { $0.id == field.id }
+        let removable = exists && field.kind == .material && draft.kind == .requirements
+            && draft.fields.filter { $0.kind == .material }.count > 1
+        return RequirementEditorSheet(field: field, removable: removable) { updated in
+            if let updated {
+                if exists { draft.applyReviewedField(updated) }
+                else if !updated.effectiveText.isEmpty { draft.fields.append(updated) }
+            } else {
+                draft.fields.removeAll { $0.id == field.id }
+            }
+            editingField = nil
         }
     }
 
@@ -584,6 +638,85 @@ struct ReviewReplyView: View {
     }
 }
 
+private struct ManualTranslationEditor: Identifiable {
+    let id = UUID()
+    let text: String
+    let target: CardLanguage
+}
+
+private struct ManualTranslationSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.cardLanguage) private var language
+    @State private var text: String
+    let editor: ManualTranslationEditor
+    let onApply: (String) -> Void
+
+    init(editor: ManualTranslationEditor, onApply: @escaping (String) -> Void) {
+        self.editor = editor
+        self.onApply = onApply
+        _text = State(initialValue: editor.text)
+    }
+
+    var body: some View {
+        let lang = language.wrappedValue
+        NavigationStack {
+            CampusPage {
+                VStack(alignment: .leading, spacing: 12) {
+                    DeskHeading(title: editor.target.name)
+                    TextField(lang.text("Edit translation"), text: $text, axis: .vertical)
+                        .lineLimit(3...8)
+                        .deskInput()
+                }
+            }
+            .navigationTitle(lang.text("Enter translation manually"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button(lang.text("Cancel")) { dismiss() } }
+            }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                CampusPrimaryAction(title: lang.text("Use reviewed translation"), icon: "checkmark") {
+                    onApply(text)
+                }
+                .disabled(text.cleaned.isEmpty)
+                .campusActionBar()
+            }
+        }
+    }
+}
+
+private struct RequirementEditorSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.cardLanguage) private var language
+    @State private var field: FieldDraft
+    let removable: Bool
+    let onApply: (FieldDraft?) -> Void
+
+    init(field: FieldDraft, removable: Bool, onApply: @escaping (FieldDraft?) -> Void) {
+        _field = State(initialValue: field)
+        self.removable = removable
+        self.onApply = onApply
+    }
+
+    var body: some View {
+        let lang = language.wrappedValue
+        NavigationStack {
+            Form {
+                Section { FieldEditor(field: $field) }
+                if removable {
+                    Button(lang.text("Remove material"), role: .destructive) { onApply(nil) }
+                }
+            }
+            .scrollDismissesKeyboard(.interactively)
+            .navigationTitle(lang.text(field.kind.label))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button(lang.text("Cancel")) { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) { Button(lang.text("Done")) { onApply(field) } }
+            }
+        }
+    }
+}
+
 private struct TranslationAddressEditor: Identifiable {
     let id = UUID()
     let translateOnSave: Bool
@@ -674,7 +807,7 @@ private struct HoldMicrophoneButton: UIViewRepresentable {
         config.image = UIImage(systemName: isHeld ? "mic.fill" : "mic")
         config.imagePadding = 8
         config.cornerStyle = .capsule
-        let foreground = isHeld ? UIColor.systemRed : UIColor(CampusStyle.translationInk)
+        let foreground = isHeld ? UIColor.systemRed : UIColor(CampusStyle.accent)
         config.baseForegroundColor = foreground
         config.baseBackgroundColor = foreground
         config.titleTextAttributesTransformer = .init { attributes in

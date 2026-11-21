@@ -36,7 +36,9 @@ struct ReplyDraft: Codable, Equatable {
     private(set) var translationError: TranslationServiceError?
     // Older cache entries lack this evidence and must be translated before confirmation.
     private var receivedTranslation: Bool?
+    private var acceptedManualTranslation: Bool?
     var hasTranslatedCurrentSource: Bool { receivedTranslation == true }
+    var hasReviewedTranslation: Bool { hasTranslatedCurrentSource || acceptedManualTranslation == true }
 
     private enum Operation: Equatable {
         case recognition(CardLanguage, recordingRef: String?)
@@ -45,7 +47,7 @@ struct ReplyDraft: Codable, Equatable {
     private enum CodingKeys: String, CodingKey {
         case id, taskID, correctedActionID, kind, original, originalText
         case sourceLanguage = "language"
-        case recordingRef, translation, speaker, fields, version, receivedTranslation
+        case recordingRef, translation, speaker, fields, version, receivedTranslation, acceptedManualTranslation
     }
 
     var isTranslating: Bool { pending == .translation }
@@ -57,7 +59,7 @@ struct ReplyDraft: Codable, Equatable {
     var canReview: Bool { recordingRef != nil || !original.cleaned.isEmpty }
 
     var canConfirm: Bool {
-        hasTranslatedCurrentSource && pending == nil && !original.cleaned.isEmpty && !translation.cleaned.isEmpty
+        hasReviewedTranslation && pending == nil && !original.cleaned.isEmpty && !translation.cleaned.isEmpty
             && (kind != .correction || !confirmedFields.isEmpty)
     }
 
@@ -98,6 +100,7 @@ struct ReplyDraft: Codable, Equatable {
     private mutating func invalidateSource() {
         invalidateRequests()
         receivedTranslation = nil
+        acceptedManualTranslation = nil
         translation = ""
     }
 
@@ -124,6 +127,7 @@ struct ReplyDraft: Codable, Equatable {
         recordingRef = reference
         originalText = nil
         receivedTranslation = nil
+        acceptedManualTranslation = nil
         translation = ""
         return true
     }
@@ -174,6 +178,7 @@ struct ReplyDraft: Codable, Equatable {
         pending = nil
         translation = value
         receivedTranslation = true
+        acceptedManualTranslation = nil
         return true
     }
 
@@ -185,8 +190,30 @@ struct ReplyDraft: Codable, Equatable {
         return true
     }
 
+    @discardableResult
+    mutating func acceptManualTranslation(_ text: String) -> Bool {
+        guard !original.cleaned.isEmpty, !text.cleaned.isEmpty else { return false }
+        captureOriginal()
+        invalidateRequests()
+        translation = text.cleaned
+        receivedTranslation = nil
+        acceptedManualTranslation = true
+        return true
+    }
+
+    mutating func applyReviewedField(_ updated: FieldDraft) {
+        guard let index = fields.firstIndex(where: { $0.id == updated.id }) else { return }
+        let previous = fields[index]
+        var field = updated
+        if kind != .correction, !previous.effectiveText.isEmpty, !field.effectiveText.isEmpty,
+           previous.effectiveText != field.effectiveText || previous.confirmedTime != field.confirmedTime {
+            field.wasEditedDuringReview = true
+        }
+        fields[index] = field
+    }
+
     mutating func editTranslation(_ text: String) {
-        guard hasTranslatedCurrentSource, translation != text else { return }
+        guard hasReviewedTranslation, translation != text else { return }
         invalidateRequests()
         translation = text
     }
@@ -197,6 +224,7 @@ struct FieldDraft: Codable, Equatable, Identifiable {
     let kind: RequirementKind
     var text = BilingualText()
     var pendingReview: CardLanguage?
+    var wasEditedDuringReview: Bool?
     var useExactTime = false
     var time = ConfirmedTime()
 

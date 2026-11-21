@@ -82,6 +82,7 @@ final class ActionItem {
     var timeWeekday: Int?
     var timeMinute: Int?
     var timeIsCutoff: Bool
+    var wasEditedDuringReview: Bool? = nil
     var isChecked: Bool
     var createdAt: Date
 
@@ -95,6 +96,7 @@ final class ActionItem {
         timeWeekday = field.confirmedTime?.weekday.rawValue
         timeMinute = field.confirmedTime?.minuteOfDay
         timeIsCutoff = field.confirmedTime?.isCutoff ?? true
+        wasEditedDuringReview = field.wasEditedDuringReview
         isChecked = false
         self.createdAt = createdAt
     }
@@ -121,6 +123,7 @@ final class ActionItem {
         timeWeekday = field.confirmedTime?.weekday.rawValue
         timeMinute = field.confirmedTime?.minuteOfDay
         timeIsCutoff = field.confirmedTime?.isCutoff ?? true
+        wasEditedDuringReview = field.wasEditedDuringReview
         if previousText != text || previousTime != time {
             isChecked = false
         }

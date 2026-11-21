@@ -21,7 +21,7 @@ Before building for offline speech, run `python3 CampusCards/Scripts/prepare_off
 | Location | Service desk, Level 1 | 一楼服务台 |
 | Lost-property location | Library reception | 图书馆前台 |
 
-The app keeps pending replies and confirmed history on the device. Requesting a translation sends the reviewed source text and its language direction to the configured service. The campus instructions are fictional.
+The app keeps pending replies and confirmed history on the device. Requesting a translation sends the reviewed source text and its language direction to the configured service. If that service is unavailable, choose **Enter translation manually**, review the text and choose **Use reviewed translation**, then **Confirm and save**. With no reviewed translation, use **Keep draft and close** instead. The campus instructions are fictional.
 
 ## 简体中文
 
