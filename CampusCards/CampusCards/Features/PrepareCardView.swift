@@ -8,6 +8,8 @@ struct PrepareCardView: View {
     @State private var fields = TaskScenario.enrollment.defaultFields
     @State private var customTitle = BilingualText()
     @State private var customQuestion = BilingualText()
+    @State private var preview: CardContent?
+    @State private var isCreating = false
     @State private var saveError = false
     let onCreate: (CampusTask) -> Void
 
@@ -19,76 +21,144 @@ struct PrepareCardView: View {
     }
 
     var body: some View {
-        Form {
-            Section(lang.text("Scenario")) {
-                Picker(lang.text("Scenario"), selection: $scenario) {
-                    ForEach(TaskScenario.allCases) { template in
-                        Text(verbatim: template.title.preferred(lang)).tag(template)
-                    }
+        CampusPage {
+            VStack(alignment: .leading, spacing: 14) {
+                templates
+                if scenario == .custom {
+                    customInput
                 }
-                .onChange(of: scenario) { _, newValue in
-                    fields = newValue.defaultFields
-                }
-            }
-
-            if scenario == .custom {
-                Section(lang.text("Task name")) {
-                    TextField(lang.text("Task name in English"), text: $customTitle.english)
-                    TextField(lang.text("Task name in Chinese"), text: $customTitle.chinese)
-                }
-                Section(lang.text("Your question")) {
-                    TextField(lang.text("Question in English"), text: $customQuestion.english, axis: .vertical)
-                        .lineLimit(2...5)
-                    TextField(lang.text("Question in Chinese"), text: $customQuestion.chinese, axis: .vertical)
-                        .lineLimit(2...5)
-                }
-            }
-
-            Section(lang.text("What do you want to ask?")) {
-                ForEach(RequirementKind.allCases) { kind in
-                    Toggle(lang.text(kind.label), isOn: Binding {
-                        fields.contains(kind)
-                    } set: { selected in
-                        if selected { fields.insert(kind) } else { fields.remove(kind) }
-                    })
-                }
-            }
-
-            if !question.isEmpty {
-                Section(lang.text("Card preview")) {
-                    LanguageLines(text: question, primary: .chinese)
-                        .padding(.vertical, 5)
+                requirements
+                if !question.isEmpty {
+                    previewButton
                 }
             }
         }
-        .scrollDismissesKeyboard(.interactively)
         .navigationTitle(lang.text("New task"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { ToolbarItem(placement: .topBarTrailing) { LanguageMenu() } }
-        .safeAreaInset(edge: .bottom) {
-            Button(action: create) {
-                Text(lang.text("Create task"))
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
-            }
-            .buttonStyle(.borderedProminent)
-            .buttonBorderShape(.roundedRectangle(radius: 16))
-            .disabled(title.isEmpty || question.isEmpty)
-            .accessibilityIdentifier("create-task")
-            .padding(.horizontal, 20)
-            .padding(.vertical, 10)
-            .background(.regularMaterial)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            CampusPrimaryAction(title: lang.text("Create task"), icon: "plus", action: create)
+                .disabled(isCreating || title.isEmpty || question.isEmpty)
+                .accessibilityIdentifier("create-task")
+                .campusActionBar()
         }
+        .fullScreenCover(item: $preview) { ShowCardView(card: $0) }
         .modifier(SaveErrorAlert(presented: $saveError))
     }
 
+    private var templates: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            heading("Scenario")
+
+            ForEach(TaskScenario.allCases) { template in
+                Button {
+                    guard scenario != template else { return }
+                    scenario = template
+                    fields = template.defaultFields
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: template.icon)
+                            .frame(width: 24)
+                            .foregroundStyle(CampusStyle.translationInk)
+                            .accessibilityHidden(true)
+                        Text(verbatim: template.title.preferred(lang))
+                            .font(.body.weight(scenario == template ? .semibold : .regular))
+                            .foregroundStyle(.primary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        if scenario == template {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(CampusStyle.translationInk)
+                                .accessibilityHidden(true)
+                        }
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .frame(minHeight: 44)
+                    .background(scenario == template ? CampusStyle.translationSurface : .clear,
+                                in: RoundedRectangle(cornerRadius: 14))
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(scenario == template ? .isSelected : [])
+                .accessibilityIdentifier("template-\(template.rawValue)")
+            }
+        }
+        .campusPanel()
+    }
+
+    @ViewBuilder
+    private var customInput: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            heading("Task name")
+            TextField(lang.text("Task name in English"), text: $customTitle.english)
+            Divider()
+            TextField(lang.text("Task name in Chinese"), text: $customTitle.chinese)
+        }
+        .campusPanel()
+
+        VStack(alignment: .leading, spacing: 12) {
+            heading("Your question")
+            TextField(lang.text("Question in English"), text: $customQuestion.english, axis: .vertical)
+                .lineLimit(2...5)
+            Divider()
+            TextField(lang.text("Question in Chinese"), text: $customQuestion.chinese, axis: .vertical)
+                .lineLimit(2...5)
+        }
+        .campusPanel(highlighted: true)
+    }
+
+    private var requirements: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            heading("What do you want to ask?")
+            ForEach(RequirementKind.allCases) { kind in
+                Toggle(isOn: Binding {
+                    fields.contains(kind)
+                } set: { selected in
+                    if selected { fields.insert(kind) } else { fields.remove(kind) }
+                }) {
+                    Label(lang.text(kind.label), systemImage: kind.icon)
+                }
+                .frame(minHeight: 44)
+                .accessibilityIdentifier("ask-\(kind.rawValue)")
+            }
+        }
+        .campusPanel()
+    }
+
+    private var previewButton: some View {
+        Button {
+            preview = .init(title: "Card preview", text: question)
+        } label: {
+            HStack {
+                Label(lang.text("Card preview"), systemImage: "text.rectangle")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .accessibilityHidden(true)
+            }
+            .foregroundStyle(CampusStyle.translationInk)
+            .padding(.vertical, 4)
+            .campusPanel(highlighted: true)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("preview-card")
+    }
+
+    private func heading(_ title: String) -> some View {
+        Text(lang.text(title)).font(.headline).accessibilityAddTraits(.isHeader)
+    }
+
     private func create() {
+        guard !isCreating, !title.isEmpty, !question.isEmpty else { return }
+        isCreating = true
         do {
             onCreate(try TaskStore(context: context).createTask(
                 scenario: scenario, title: title, question: question, fields: orderedFields
             ))
         } catch {
+            isCreating = false
             saveError = true
         }
     }

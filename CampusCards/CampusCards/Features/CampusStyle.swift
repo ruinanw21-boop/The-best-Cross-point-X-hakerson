@@ -25,8 +25,105 @@ enum CampusStyle {
             ? UIColor(red: 0.76, green: 0.73, blue: 1.0, alpha: 1)
             : UIColor(red: 0.27, green: 0.25, blue: 0.76, alpha: 1)
     })
-    static let cardInk = Color(.sRGB, red: 0.12, green: 0.12, blue: 0.27)
-    static let paper = Color(.sRGB, red: 0.95, green: 0.94, blue: 1.0)
+    static let background = Color(uiColor: .systemGroupedBackground)
+    static let pageWidth: CGFloat = 560
+}
+
+
+struct CampusPage<Content: View>: View {
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        ScrollView {
+            content()
+                .frame(maxWidth: CampusStyle.pageWidth)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 16)
+                .frame(maxWidth: .infinity)
+        }
+        .scrollDismissesKeyboard(.interactively)
+        .background(CampusStyle.background)
+    }
+}
+
+extension View {
+    func campusPanel(highlighted: Bool = false, inset: CGFloat = 16) -> some View {
+        frame(maxWidth: .infinity, alignment: .leading)
+            .padding(inset)
+            .background(highlighted ? CampusStyle.translationSurface : CampusStyle.surface,
+                        in: RoundedRectangle(cornerRadius: 24))
+    }
+
+    func campusActionBar() -> some View {
+        frame(maxWidth: CampusStyle.pageWidth)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 10)
+            .frame(maxWidth: .infinity)
+            .background(.bar)
+    }
+}
+
+struct CampusPrimaryAction: View {
+    let title: String
+    var icon: String? = nil
+    var isBusy = false
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Group {
+                if isBusy {
+                    ProgressView().accessibilityLabel(title)
+                } else if let icon {
+                    Label(title, systemImage: icon).font(.headline)
+                } else {
+                    Text(title).font(.headline)
+                }
+            }
+            .multilineTextAlignment(.center)
+            .frame(maxWidth: .infinity, minHeight: 30)
+        }
+        .buttonStyle(.borderedProminent)
+        .buttonBorderShape(.capsule)
+        .controlSize(.large)
+    }
+}
+
+struct CampusLanguagePair: View {
+    let first: CardLanguage
+    let firstLabel: String
+    let secondLabel: String
+    let swapLabel: String
+    let swapIdentifier: String
+    let swap: () -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            language(first, label: firstLabel)
+            Button(action: swap) {
+                Image(systemName: "arrow.left.arrow.right")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(width: 44, height: 44)
+                    .background(CampusStyle.translationSurface, in: Circle())
+                    .contentShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(CampusStyle.translationInk)
+            .accessibilityLabel(swapLabel)
+            .accessibilityIdentifier(swapIdentifier)
+            language(first.other, label: secondLabel)
+        }
+        .campusPanel(inset: 10)
+    }
+
+    private func language(_ choice: CardLanguage, label: String) -> some View {
+        Text(verbatim: choice.name)
+            .font(.subheadline.weight(.semibold))
+            .multilineTextAlignment(.center)
+            .frame(maxWidth: .infinity)
+            .accessibilityLabel(label)
+            .accessibilityValue(choice.name)
+    }
 }
 
 struct LanguageMenu: View {
@@ -34,7 +131,7 @@ struct LanguageMenu: View {
 
     var body: some View {
         Menu {
-            Picker("Language", selection: language) {
+            Picker(language.wrappedValue.text("Language"), selection: language) {
                 ForEach(CardLanguage.allCases) { choice in
                     Text(verbatim: choice.name).tag(choice)
                 }

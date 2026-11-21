@@ -7,17 +7,24 @@ struct TaskDetailView: View {
     @Environment(\.cardLanguage) private var language
     @Query private var actions: [ActionItem]
     @Query private var turns: [ConversationTurn]
+    @State private var section: DetailSection = .checklist
     @State private var card: CardContent?
     @State private var reply: ReplyPresentation?
     @State private var savedTurnID: UUID?
     @State private var recordAfterCard = false
     @State private var saveError = false
 
+    private enum DetailSection: String, CaseIterable {
+        case checklist = "Checklist"
+        case history = "Conversation history"
+    }
+
     init(task: CampusTask) {
         self.task = task
         let id = task.id
         _actions = Query(filter: #Predicate<ActionItem> { $0.taskID == id }, sort: \ActionItem.createdAt)
-        _turns = Query(filter: #Predicate<ConversationTurn> { $0.taskID == id }, sort: \ConversationTurn.confirmedAt)
+        _turns = Query(filter: #Predicate<ConversationTurn> { $0.taskID == id },
+                       sort: \ConversationTurn.confirmedAt, order: .reverse)
     }
 
     private var lang: CardLanguage { language.wrappedValue }
@@ -27,69 +34,37 @@ struct TaskDetailView: View {
     }
 
     var body: some View {
-        List {
-            Section {
-                header
-            }
-            .listRowBackground(Color.clear)
-            .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 4, trailing: 0))
-
-            Section(lang.text("Action checklist")) {
-                if actions.isEmpty {
-                    Text(lang.text("Confirmed requirements will appear here."))
-                        .foregroundStyle(.secondary)
-                }
-
-                ForEach(actions) { item in
-                    actionRow(item)
-                }
-
-                if !actions.isEmpty {
-                    Button {
-                        showChecklist()
-                    } label: {
-                        Label(lang.text("Show checklist"), systemImage: "text.rectangle")
+        CampusPage {
+            VStack(alignment: .leading, spacing: 14) {
+                taskHeader
+                Picker(lang.text("Task details"), selection: $section) {
+                    ForEach(DetailSection.allCases, id: \.self) { item in
+                        Text(lang.text(item.rawValue)).tag(item)
                     }
                 }
-            }
+                .pickerStyle(.segmented)
+                .accessibilityIdentifier("task-details-section")
 
-            if !missing.isEmpty {
-                Section(lang.text("To ask")) {
-                    ForEach(missing) { kind in
-                        Button {
-                            card = .init(title: "Follow-up question", text: kind.question)
-                        } label: {
-                            Label(kind.question.preferred(lang), systemImage: "questionmark.bubble")
-                        }
-                    }
+                switch section {
+                case .checklist:
+                    checklist
+                    if !missing.isEmpty { followUpQuestions }
+                    completionButton
+                case .history:
+                    history
                 }
-            }
-
-            Section(lang.text("Conversation history")) {
-                if turns.isEmpty {
-                    Text(lang.text("Saved replies will appear here."))
-                        .foregroundStyle(.secondary)
-                }
-                ForEach(turns) { turn in
-                    historyRow(turn)
-                }
-            }
-
-            Section {
-                Button {
-                    change { try $0.setComplete(!task.isComplete, for: task) }
-                } label: {
-                    Label(
-                        lang.text(task.isComplete ? "Reopen task" : "Mark complete"),
-                        systemImage: task.isComplete ? "arrow.uturn.backward" : "checkmark.circle"
-                    )
-                }
-                .accessibilityIdentifier("toggle-complete")
             }
         }
         .navigationTitle(lang.text("Task details"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { ToolbarItem(placement: .topBarTrailing) { LanguageMenu() } }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            CampusPrimaryAction(title: lang.text("Translate reply"), icon: "character.bubble") {
+                reply = .init()
+            }
+            .accessibilityIdentifier("record-reply")
+            .campusActionBar()
+        }
         .fullScreenCover(item: $card, onDismiss: {
             if recordAfterCard {
                 recordAfterCard = false
@@ -104,14 +79,15 @@ struct TaskDetailView: View {
         .sheet(item: $reply) { presentation in
             ReviewReplyView(task: task, correcting: presentation.correction, onSaved: { id in
                 savedTurnID = id
+                section = .history
             })
             .id(presentation.id)
         }
         .modifier(SaveErrorAlert(presented: $saveError))
     }
 
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 14) {
+    private var taskHeader: some View {
+        VStack(alignment: .leading, spacing: 12) {
             Label(
                 lang.text(task.isComplete ? "Completed" : "In progress"),
                 systemImage: task.isComplete ? "checkmark.circle.fill" : task.scenario.icon
@@ -123,37 +99,90 @@ struct TaskDetailView: View {
                 .font(.title.weight(.bold))
                 .accessibilityAddTraits(.isHeader)
 
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 10) { headerButtons }
-                VStack(alignment: .leading, spacing: 10) { headerButtons }
+            Button {
+                card = .init(title: "Question card", text: task.question)
+            } label: {
+                Label(lang.text("Show card"), systemImage: "text.rectangle")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(minHeight: 24)
             }
+            .buttonStyle(.bordered)
+            .buttonBorderShape(.capsule)
+            .accessibilityIdentifier("show-question")
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(20)
-        .background(CampusStyle.surface, in: RoundedRectangle(cornerRadius: 24))
+        .campusPanel(highlighted: true, inset: 20)
     }
 
-    @ViewBuilder
-    private var headerButtons: some View {
-        Button {
-            reply = .init()
-        } label: {
-            Label(lang.text("Translate reply"), systemImage: "character.bubble")
+    private var checklist: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if actions.isEmpty {
+                Label(lang.text("Confirmed requirements will appear here."), systemImage: "checklist")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .padding(.vertical, 4)
+            } else {
+                ForEach(actions) { item in
+                    if item.id != actions.first?.id { Divider() }
+                    actionRow(item)
+                }
+                Divider()
+                Button(action: showChecklist) {
+                    Label(lang.text("Show checklist"), systemImage: "text.rectangle")
+                        .frame(minHeight: 44, alignment: .leading)
+                }
+                .accessibilityIdentifier("show-checklist")
+            }
         }
-        .buttonStyle(.borderedProminent)
-        .accessibilityIdentifier("record-reply")
+        .campusPanel()
+    }
 
+    private var followUpQuestions: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(lang.text("To ask"))
+                .font(.headline)
+                .accessibilityAddTraits(.isHeader)
+
+            ForEach(missing) { kind in
+                Button {
+                    card = .init(title: "Follow-up question", text: kind.question)
+                } label: {
+                    HStack(spacing: 10) {
+                        Label(kind.question.preferred(lang), systemImage: kind.icon)
+                            .font(.subheadline)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.semibold))
+                            .accessibilityHidden(true)
+                    }
+                    .frame(minHeight: 44, alignment: .leading)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(CampusStyle.translationInk)
+                .accessibilityIdentifier("follow-up-\(kind.rawValue)")
+            }
+        }
+        .campusPanel()
+    }
+
+    private var completionButton: some View {
         Button {
-            card = .init(title: "Question card", text: task.question)
+            change { try $0.setComplete(!task.isComplete, for: task) }
         } label: {
-            Label(lang.text("Show card"), systemImage: "text.rectangle")
+            Label(
+                lang.text(task.isComplete ? "Reopen task" : "Mark complete"),
+                systemImage: task.isComplete ? "arrow.uturn.backward" : "checkmark.circle"
+            )
+            .frame(maxWidth: .infinity, minHeight: 34)
         }
         .buttonStyle(.bordered)
-        .accessibilityIdentifier("show-question")
+        .buttonBorderShape(.capsule)
+        .controlSize(.large)
+        .accessibilityIdentifier("toggle-complete")
     }
 
     private func actionRow(_ item: ActionItem) -> some View {
-        HStack(alignment: .top, spacing: 12) {
+        HStack(alignment: .top, spacing: 10) {
             if item.kind == .material {
                 Button {
                     change { try $0.toggleMaterial(item, for: task) }
@@ -163,13 +192,14 @@ struct TaskDetailView: View {
                         .frame(width: 44, height: 44)
                         .contentShape(Rectangle())
                 }
-                .buttonStyle(.borderless)
+                .buttonStyle(.plain)
+                .foregroundStyle(CampusStyle.translationInk)
                 .accessibilityLabel(item.text.preferred(lang))
                 .accessibilityValue(lang.text(item.isChecked ? "Ready" : "To prepare"))
                 .accessibilityIdentifier("material-check")
             }
 
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 5) {
                 Label(lang.text(item.kind.label), systemImage: item.kind.icon)
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
@@ -189,65 +219,25 @@ struct TaskDetailView: View {
                     .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
             }
-            .buttonStyle(.borderless)
+            .buttonStyle(.plain)
+            .foregroundStyle(CampusStyle.translationInk)
             .accessibilityLabel(lang.text("Requirement options"))
         }
     }
 
-    private func historyRow(_ turn: ConversationTurn) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Label(lang.text(turn.kind.label), systemImage: turn.kind == .directions ? "location" : "bubble.left")
-                .font(.subheadline.weight(.semibold))
-
-            if turn.id == savedTurnID {
-                Label(lang.text("Reply saved"), systemImage: "checkmark.circle")
-                    .font(.caption)
-                    .accessibilityIdentifier("reply-saved")
-            }
-
-            Text(turn.confirmedAt, format: .dateTime.month().day().hour().minute())
-                .font(.caption)
+    @ViewBuilder
+    private var history: some View {
+        if turns.isEmpty {
+            Label(lang.text("Saved replies will appear here."), systemImage: "bubble.left.and.bubble.right")
+                .font(.subheadline)
                 .foregroundStyle(.secondary)
-
-            if !turn.speaker.isEmpty {
-                Text(verbatim: turn.speaker).font(.caption).foregroundStyle(.secondary)
-            }
-
-            Text(verbatim: turn.original)
-                .font(.body)
-                .environment(\.locale, turn.originalLanguage.locale)
-                .textSelection(.enabled)
-                .accessibilityIdentifier("history-original")
-
-            if let initial = turn.originalText, initial != turn.original {
-                DisclosureGroup(lang.text("Original wording")) {
-                    Text(verbatim: initial)
-                        .environment(\.locale, turn.originalLanguage.locale)
-                        .textSelection(.enabled)
-                }
-                .font(.footnote)
-            }
-
-            if !turn.translation.isEmpty {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(verbatim: turn.originalLanguage.other.name)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(CampusStyle.translationInk)
-                    Text(verbatim: turn.translation)
-                        .font(.body.weight(.medium))
-                        .environment(\.locale, turn.originalLanguage.other.locale)
-                        .textSelection(.enabled)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(12)
-                .background(CampusStyle.translationSurface, in: RoundedRectangle(cornerRadius: 14))
-            }
-
-            if let reference = turn.recordingRef {
-                RecordingPlaybackButton(recordingRef: reference)
+                .padding(.vertical, 4)
+                .campusPanel()
+        } else {
+            ForEach(turns) { turn in
+                ReplyHistoryCard(turn: turn, justSaved: turn.id == savedTurnID)
             }
         }
-        .padding(.vertical, 5)
     }
 
     private func showChecklist() {
@@ -267,6 +257,74 @@ struct TaskDetailView: View {
         } catch {
             saveError = true
         }
+    }
+}
+
+private struct ReplyHistoryCard: View {
+    let turn: ConversationTurn
+    let justSaved: Bool
+    @Environment(\.cardLanguage) private var language
+
+    private var lang: CardLanguage { language.wrappedValue }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Label(lang.text(turn.kind.label), systemImage: turn.kind == .directions ? "location" : "bubble.left")
+                    .font(.subheadline.weight(.semibold))
+                    .accessibilityAddTraits(.isHeader)
+                Text(turn.confirmedAt, format: .dateTime.month().day().hour().minute())
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                if !turn.speaker.isEmpty {
+                    Text(verbatim: turn.speaker).font(.caption).foregroundStyle(.secondary)
+                }
+                if justSaved {
+                    Label(lang.text("Reply saved"), systemImage: "checkmark.circle")
+                        .font(.caption)
+                        .foregroundStyle(CampusStyle.translationInk)
+                        .accessibilityIdentifier("reply-saved")
+                }
+            }
+
+            quotedText(turn.original, in: turn.originalLanguage, prominent: false)
+                .accessibilityIdentifier("history-original")
+
+            if !turn.translation.isEmpty {
+                quotedText(turn.translation, in: turn.originalLanguage.other, prominent: true)
+            }
+
+            if let initial = turn.originalText, initial != turn.original {
+                DisclosureGroup(lang.text("Original wording")) {
+                    Text(verbatim: initial)
+                        .environment(\.locale, turn.originalLanguage.locale)
+                        .textSelection(.enabled)
+                        .padding(.top, 6)
+                }
+                .font(.footnote)
+            }
+
+            if let reference = turn.recordingRef {
+                RecordingPlaybackButton(recordingRef: reference)
+            }
+        }
+        .campusPanel()
+    }
+
+    private func quotedText(_ text: String, in cardLanguage: CardLanguage, prominent: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(verbatim: cardLanguage.name)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(prominent ? CampusStyle.translationInk : .secondary)
+            Text(verbatim: text)
+                .font(prominent ? .body.weight(.medium) : .body)
+                .environment(\.locale, cardLanguage.locale)
+                .textSelection(.enabled)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(prominent ? CampusStyle.translationSurface : CampusStyle.background,
+                    in: RoundedRectangle(cornerRadius: 14))
     }
 }
 

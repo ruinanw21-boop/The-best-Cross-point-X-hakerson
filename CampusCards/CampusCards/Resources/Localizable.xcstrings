@@ -111,6 +111,17 @@
         }
       }
     },
+    "Checklist": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清单"
+          }
+        }
+      }
+    },
     "Chinese translation": {
       "extractionState": "manual",
       "localizations": {
@@ -474,6 +485,17 @@
         }
       }
     },
+    "First language": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "第一语言"
+          }
+        }
+      }
+    },
     "Follow-up question": {
       "extractionState": "manual",
       "localizations": {
@@ -657,6 +679,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "没有录到声音。说话时请按住麦克风。"
+          }
+        }
+      }
+    },
+    "No completed tasks": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂无已办结事项"
+          }
+        }
+      }
+    },
+    "No tasks in progress": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂无进行中的事项"
           }
         }
       }
@@ -1024,6 +1068,17 @@
         }
       }
     },
+    "Second language": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "第二语言"
+          }
+        }
+      }
+    },
     "Service address": {
       "extractionState": "manual",
       "localizations": {
@@ -1185,6 +1240,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "英文事项名称"
+          }
+        }
+      }
+    },
+    "Task status": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "事项状态"
           }
         }
       }

@@ -66,7 +66,7 @@ struct ReviewReplyView: View {
     var body: some View {
         NavigationStack {
             ScrollViewReader { scroll in
-                ScrollView {
+                CampusPage {
                     VStack(alignment: .leading, spacing: 14) {
                         replyContext
                         languageDirection
@@ -74,12 +74,7 @@ struct ReviewReplyView: View {
                         translationPanel.id(EditorField.translation)
                         replyDetails
                     }
-                    .frame(maxWidth: 560)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 16)
-                    .frame(maxWidth: .infinity)
                 }
-                .scrollDismissesKeyboard(.interactively)
                 .onChange(of: draft.hasTranslatedCurrentSource) { _, translated in
                     if translated { scroll.scrollTo(EditorField.translation, anchor: .bottom) }
                 }
@@ -87,7 +82,6 @@ struct ReviewReplyView: View {
                     if error != nil { scroll.scrollTo(EditorField.translation, anchor: .bottom) }
                 }
             }
-            .background(Color(uiColor: .systemGroupedBackground))
             .navigationTitle(lang.text("Translate reply"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -196,37 +190,16 @@ struct ReviewReplyView: View {
     }
 
     private var languageDirection: some View {
-        HStack(spacing: 8) {
-            directionLanguage(draft.language, label: "Source language")
-            Button {
-                stopWork()
-                recognitionMessage = nil
-                draft.language = draft.language.other
-            } label: {
-                Image(systemName: "arrow.left.arrow.right")
-                    .font(.subheadline.weight(.semibold))
-                    .frame(width: 44, height: 44)
-                    .background(CampusStyle.ink.opacity(0.12), in: Circle())
-                    .contentShape(Circle())
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(.tint)
-            .disabled(press != nil)
-            .accessibilityLabel(lang.text("Swap translation languages"))
-            .accessibilityIdentifier("swap-translation-languages")
-            directionLanguage(draft.language.other, label: "Target language")
+        CampusLanguagePair(
+            first: draft.language, firstLabel: lang.text("Source language"),
+            secondLabel: lang.text("Target language"), swapLabel: lang.text("Swap translation languages"),
+            swapIdentifier: "swap-translation-languages"
+        ) {
+            stopWork()
+            recognitionMessage = nil
+            draft.language = draft.language.other
         }
-        .padding(10)
-        .background(CampusStyle.surface, in: RoundedRectangle(cornerRadius: 22))
-    }
-
-    private func directionLanguage(_ choice: CardLanguage, label: String) -> some View {
-        Text(verbatim: choice.name)
-            .font(.subheadline.weight(.semibold))
-            .multilineTextAlignment(.center)
-            .frame(maxWidth: .infinity)
-            .accessibilityLabel(lang.text(label))
-            .accessibilityValue(choice.name)
+        .disabled(press != nil)
     }
 
     private var sourcePanel: some View {
@@ -270,8 +243,7 @@ struct ReviewReplyView: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .padding(16)
-        .background(CampusStyle.surface, in: RoundedRectangle(cornerRadius: 24))
+        .campusPanel()
     }
 
     @ViewBuilder
@@ -357,44 +329,25 @@ struct ReviewReplyView: View {
                     .frame(minHeight: 46, alignment: .topLeading)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(CampusStyle.translationSurface, in: RoundedRectangle(cornerRadius: 24))
+        .campusPanel(highlighted: true)
     }
 
     private var actionBar: some View {
         let saving = draft.hasTranslatedCurrentSource && !draft.translation.cleaned.isEmpty
             && draft.translationError == nil
-        let title = saving ? "Confirm and save" : translationButtonTitle
-        let icon = saving ? "checkmark" : "character.bubble"
-        return Button {
+        let title = draft.isTranslating ? "Translating…" : (saving ? "Confirm and save" : translationButtonTitle)
+        return CampusPrimaryAction(title: lang.text(title), icon: saving ? "checkmark" : "character.bubble",
+                                   isBusy: draft.isTranslating) {
             focusedField = nil
             if saving {
                 save()
             } else {
                 requestTranslation()
             }
-        } label: {
-            Group {
-                if draft.isTranslating {
-                    ProgressView().accessibilityLabel(lang.text("Translating…"))
-                } else {
-                    Label(lang.text(title), systemImage: icon)
-                        .font(.headline)
-                }
-            }
-            .frame(maxWidth: .infinity, minHeight: 30)
         }
-        .buttonStyle(.borderedProminent)
-        .buttonBorderShape(.capsule)
-        .controlSize(.large)
         .disabled(isSaving || press != nil || (saving ? !draft.canConfirm : !canTranslate))
         .accessibilityIdentifier(saving ? "confirm-reply" : "translate-reply")
-        .frame(maxWidth: 560)
-        .padding(.horizontal, 20)
-        .padding(.vertical, 10)
-        .frame(maxWidth: .infinity)
-        .background(.bar)
+        .campusActionBar()
     }
 
     private var replyDetails: some View {
@@ -412,9 +365,7 @@ struct ReviewReplyView: View {
                 .font(.subheadline.weight(.semibold))
                 .frame(minHeight: 44)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 4)
-        .background(CampusStyle.surface, in: RoundedRectangle(cornerRadius: 20))
+        .campusPanel(inset: 12)
         .accessibilityIdentifier("reply-details")
     }
 
@@ -652,21 +603,23 @@ private struct TranslationAddressView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section {
+            CampusPage {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text(lang.text("Service address"))
+                        .font(.headline)
                     TextField(lang.text("Service address"), text: $address,
                               prompt: Text(verbatim: "http://192.168.1.23:8000"))
                         .keyboardType(.URL)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         .accessibilityIdentifier("translation-address")
-                } header: {
-                    Text(lang.text("Service address"))
-                } footer: {
                     Text(lang.text(address.cleaned.isEmpty || validAddress
                                    ? "Enter the Wi-Fi address and port of the Windows translation service."
                                    : "Use the service base address, without /translate."))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                 }
+                .campusPanel()
             }
             .navigationTitle(lang.text("Translation service"))
             .navigationBarTitleDisplayMode(.inline)
@@ -676,20 +629,11 @@ private struct TranslationAddressView: View {
                 }
             }
             .safeAreaInset(edge: .bottom, spacing: 0) {
-                Button {
+                CampusPrimaryAction(title: lang.text(translateOnSave ? "Save and translate" : "Save address")) {
                     onSave(address.cleaned)
-                } label: {
-                    Text(lang.text(translateOnSave ? "Save and translate" : "Save address"))
-                        .font(.headline)
-                        .frame(maxWidth: .infinity, minHeight: 30)
                 }
-                .buttonStyle(.borderedProminent)
-                .buttonBorderShape(.capsule)
-                .controlSize(.large)
                 .disabled(!validAddress)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 10)
-                .background(.bar)
+                .campusActionBar()
             }
         }
     }

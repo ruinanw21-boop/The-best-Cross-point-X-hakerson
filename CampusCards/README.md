@@ -1,4 +1,4 @@
-# Campus Cards · Reply translation
+# Campus Cards
 
 ## English
 
@@ -8,11 +8,11 @@ Before building for offline speech, run `python3 CampusCards/Scripts/prepare_off
 
 ### Demo walkthrough
 
-1. On the English home screen, choose **New task → Submit enrollment documents → Create task**. Open **Show card** and try **Swap card languages**.
+1. On the English home screen, tap **New task** and choose **Submit enrollment documents**. Use **Card preview**, then tap **Create task**. Open **Show card** to present the question. Tap the arrow between the languages to swap their order.
 2. Choose **Translate reply → Directions**. Set the source language to Chinese and enter `去学生服务中心`. Tap **Translate to English**. On first use, enter the Windows service base address and tap **Save and translate**. Edit the result and tap **Confirm and save**.
 3. Record a **Requirements** reply. Enter `周五下午四点前，把护照复印件交到一楼服务台。` In review, check the translation and expand **Action checklist** to fill in the fields. Under **Set an exact time**, choose Friday and set the clock from 4:00 p.m. to 3:30 p.m. Confirm and save.
-4. Relaunch the app and open the task. The checklist should say **By 3:30 p.m. on Friday** and **周五下午三点半前**. The original reply should still say **四点**.
-5. Create **Collect lost property**. Save a requirements reply with only the library reception location. Open the **What do I need to bring?** card and save a second reply with **Student ID / 学生证**. Check the item, complete the task, then reopen it.
+4. Relaunch the app and open the task. The checklist should say **By 3:30 p.m. on Friday** and **周五下午三点半前**. Open **Conversation history** to verify that the original reply still says **四点**.
+5. Create **Collect lost property**. Save a requirements reply with only the library reception location. Open the **What do I need to bring?** card and save a second reply with **Student ID / 学生证**. Check the item and mark the task complete. Return to **My tasks**, switch to **Completed** and reopen it.
 6. Try the globe menu mid-reply. The current draft should stay open and the selected interface language should persist across launches.
 
 | Field | English | 简体中文 |
@@ -29,11 +29,11 @@ The app keeps pending replies and confirmed history on the device. Requesting a 
 
 ### 演示流程
 
-1. 从英文首页新建「补交入学材料」，出示大字问句，再交换中英文顺序。
+1. 从首页选择「新建事项 → 补交入学材料」，创建前可点「卡片预览」。创建后点「出示卡片」，用两种语言中间的箭头交换顺序。
 2. 选择「翻译答复 → 指路」，把原文语言设为中文，输入「去学生服务中心」。点「翻译成英文」，首次使用时填写 Windows 服务地址，再点「保存并翻译」。检查或编辑译文后点「确认并保存」。
 3. 再录入一轮「办事要求」原话「周五下午四点前，把护照复印件交到一楼服务台。」检查译文，展开「行动清单」，按上表手填双语材料和地点。打开「设置明确时间」，选择周五，把 16:00 改成 15:30 后保存。
-4. 重启 App 后打开该事项，清单中英文应显示下午三点半，历史原话仍保留「四点」。
-5. 新建「领取失物」，先确认图书馆前台，再出示追问卡并补录学生证。勾选学生证、办结，再重新打开事项。
+4. 重启 App 后打开该事项，「清单」的中英文应显示下午三点半。在「交流记录」核对原话仍是「四点」。
+5. 新建「领取失物」，先确认图书馆前台，再出示追问卡并补录学生证。勾选学生证并点「办结」，回首页切到「已办结」，打开事项后点「重新办理」。
 6. 录到一半时用地球图标切换界面语言，继续编辑原草稿。重启后检查语言偏好。
 
 演示里的校园办事要求为虚构示例。
