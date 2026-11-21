@@ -11,10 +11,14 @@
 		11D6D6230C07EF8367F7BD0C /* ShowCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EFB9C31B236FE3B75E74F6F4 /* ShowCardView.swift */; };
 		40750191D32FE0B3E051690C /* CampusCardsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E93D73B3C233D12AB65D055 /* CampusCardsApp.swift */; };
 		41EE6B06E69ECE8B299EF957 /* TaskStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35D537F2BDF04959350B5616 /* TaskStoreTests.swift */; };
+		BB3A45AB47254CDF1875905D /* TranslationClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE799D1E1512F229DED289C0 /* TranslationClientTests.swift */; };
+		0FB65C6E1951E8902CB60FDF /* ReplyWorkflowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7448C5C258270B533411666F /* ReplyWorkflowTests.swift */; };
 		75ACFAA1A2A9B6EC35B70F13 /* ReviewReplyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D245817F3E74CE0052BC327D /* ReviewReplyView.swift */; };
 		88E3C7AE0597ACD1D98CC08D /* CampusStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62314732B8BA2A6D7A9CC109 /* CampusStyle.swift */; };
 		96A5AA7CD0776AF986B5662A /* PrepareCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B35C6340F506EC7D4DCB34CD /* PrepareCardView.swift */; };
 		96DC62A34687BC11B0E3136C /* ReplyDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8D29C7F6D6FE00E7E8EDB4A /* ReplyDraft.swift */; };
+		4D2609E2BF9CBACF59EA69D0 /* TranslationClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0CB8AC04E9CD8843DD2610 /* TranslationClient.swift */; };
+		1E138D19B918F9861D1A0F63 /* ReplyWorkflow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3648BDDDB5917E957008B04A /* ReplyWorkflow.swift */; };
 		975B6338149FAEC4F3AC8185 /* TaskListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E751F23EC1F540B5C20DFD14 /* TaskListView.swift */; };
 		A17418BD154D59BA2528B10E /* CampusTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = A270E8CE3200CE8F3D86E6DA /* CampusTask.swift */; };
 		AE774FC2D40A1A81396926B2 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = B506C335A68CF9BCE316091A /* Localizable.xcstrings */; };
@@ -36,6 +40,8 @@
 /* Begin PBXFileReference section */
 		1E93D73B3C233D12AB65D055 /* CampusCardsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CampusCardsApp.swift; sourceTree = "<group>"; };
 		35D537F2BDF04959350B5616 /* TaskStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskStoreTests.swift; sourceTree = "<group>"; };
+		BE799D1E1512F229DED289C0 /* TranslationClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationClientTests.swift; sourceTree = "<group>"; };
+		7448C5C258270B533411666F /* ReplyWorkflowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReplyWorkflowTests.swift; sourceTree = "<group>"; };
 		62314732B8BA2A6D7A9CC109 /* CampusStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CampusStyle.swift; sourceTree = "<group>"; };
 		681C948D238C526E9E3424E0 /* CampusCards.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CampusCards.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		74AF8620C323A06A9C99ED2B /* ActionItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionItem.swift; sourceTree = "<group>"; };
@@ -43,11 +49,14 @@
 		A270E8CE3200CE8F3D86E6DA /* CampusTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CampusTask.swift; sourceTree = "<group>"; };
 		B35C6340F506EC7D4DCB34CD /* PrepareCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrepareCardView.swift; sourceTree = "<group>"; };
 		B506C335A68CF9BCE316091A /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
+		88D4561AF51FA2B5540B8BC8 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		BBB48F6DEBEFB9C0844586D2 /* TaskStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskStore.swift; sourceTree = "<group>"; };
 		BD3E8F66CCCFA75A798C97D0 /* ConversationTurn.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationTurn.swift; sourceTree = "<group>"; };
 		D245817F3E74CE0052BC327D /* ReviewReplyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewReplyView.swift; sourceTree = "<group>"; };
 		E751F23EC1F540B5C20DFD14 /* TaskListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskListView.swift; sourceTree = "<group>"; };
 		E8D29C7F6D6FE00E7E8EDB4A /* ReplyDraft.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReplyDraft.swift; sourceTree = "<group>"; };
+		5E0CB8AC04E9CD8843DD2610 /* TranslationClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationClient.swift; sourceTree = "<group>"; };
+		3648BDDDB5917E957008B04A /* ReplyWorkflow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReplyWorkflow.swift; sourceTree = "<group>"; };
 		EFB9C31B236FE3B75E74F6F4 /* ShowCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShowCardView.swift; sourceTree = "<group>"; };
 		F739566ED5280322FF98A798 /* CampusCardsTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CampusCardsTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -94,6 +103,8 @@
 				62314732B8BA2A6D7A9CC109 /* CampusStyle.swift */,
 				B35C6340F506EC7D4DCB34CD /* PrepareCardView.swift */,
 				E8D29C7F6D6FE00E7E8EDB4A /* ReplyDraft.swift */,
+				5E0CB8AC04E9CD8843DD2610 /* TranslationClient.swift */,
+				3648BDDDB5917E957008B04A /* ReplyWorkflow.swift */,
 				D245817F3E74CE0052BC327D /* ReviewReplyView.swift */,
 				EFB9C31B236FE3B75E74F6F4 /* ShowCardView.swift */,
 				83FD8B51CECB20CF95620DDC /* TaskDetailView.swift */,
@@ -114,6 +125,7 @@
 			isa = PBXGroup;
 			children = (
 				B506C335A68CF9BCE316091A /* Localizable.xcstrings */,
+				88D4561AF51FA2B5540B8BC8 /* Info.plist */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -122,6 +134,8 @@
 			isa = PBXGroup;
 			children = (
 				35D537F2BDF04959350B5616 /* TaskStoreTests.swift */,
+				BE799D1E1512F229DED289C0 /* TranslationClientTests.swift */,
+				7448C5C258270B533411666F /* ReplyWorkflowTests.swift */,
 			);
 			path = CampusCardsTests;
 			sourceTree = "<group>";
@@ -246,6 +260,8 @@
 				88E3C7AE0597ACD1D98CC08D /* CampusStyle.swift in Sources */,
 				96A5AA7CD0776AF986B5662A /* PrepareCardView.swift in Sources */,
 				96DC62A34687BC11B0E3136C /* ReplyDraft.swift in Sources */,
+				4D2609E2BF9CBACF59EA69D0 /* TranslationClient.swift in Sources */,
+				1E138D19B918F9861D1A0F63 /* ReplyWorkflow.swift in Sources */,
 				75ACFAA1A2A9B6EC35B70F13 /* ReviewReplyView.swift in Sources */,
 				11D6D6230C07EF8367F7BD0C /* ShowCardView.swift in Sources */,
 				F1C1DAAFC70938D6F47894AE /* TaskDetailView.swift in Sources */,
@@ -262,6 +278,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				41EE6B06E69ECE8B299EF957 /* TaskStoreTests.swift in Sources */,
+				BB3A45AB47254CDF1875905D /* TranslationClientTests.swift in Sources */,
+				0FB65C6E1951E8902CB60FDF /* ReplyWorkflowTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -296,6 +314,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = CampusCards/Resources/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Campus Cards";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -336,6 +355,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = CampusCards/Resources/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Campus Cards";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

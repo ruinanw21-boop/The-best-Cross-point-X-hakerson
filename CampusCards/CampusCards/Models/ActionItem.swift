@@ -1,7 +1,7 @@
 import Foundation
 import SwiftData
 
-enum RequirementKind: String, CaseIterable, Identifiable {
+enum RequirementKind: String, Codable, CaseIterable, Identifiable {
     case location, material, deadline
 
     var id: Self { self }
@@ -30,7 +30,7 @@ enum RequirementKind: String, CaseIterable, Identifiable {
     }
 }
 
-struct ConfirmedTime: Equatable {
+struct ConfirmedTime: Codable, Equatable {
     var weekday: Weekday = .unspecified
     var minuteOfDay = 16 * 60
     var isCutoff = true
@@ -59,7 +59,7 @@ struct ConfirmedTime: Equatable {
     }
 }
 
-enum Weekday: Int, CaseIterable, Identifiable {
+enum Weekday: Int, Codable, CaseIterable, Identifiable {
     case unspecified, monday, tuesday, wednesday, thursday, friday, saturday, sunday
 
     var id: Self { self }

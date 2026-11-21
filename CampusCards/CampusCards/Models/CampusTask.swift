@@ -1,7 +1,7 @@
 import Foundation
 import SwiftData
 
-enum CardLanguage: String, CaseIterable, Identifiable {
+enum CardLanguage: String, Codable, CaseIterable, Identifiable {
     case english = "en"
     case chinese = "zh-Hans"
 
@@ -17,7 +17,7 @@ enum CardLanguage: String, CaseIterable, Identifiable {
     }
 }
 
-struct BilingualText: Hashable {
+struct BilingualText: Codable, Hashable {
     var english = ""
     var chinese = ""
 
