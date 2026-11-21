@@ -52,7 +52,7 @@ struct TaskListView: View {
     private var masthead: some View {
         HStack(spacing: 10) {
             DeskMark()
-            Text(lang.text("Campus Cards"))
+            Text(lang.text("Bilingual Cards"))
                 .font(.headline.weight(.bold))
                 .foregroundStyle(CampusStyle.ticketInk)
                 .accessibilityAddTraits(.isHeader)
@@ -66,15 +66,15 @@ struct TaskListView: View {
 
     private var hero: some View {
         VStack(alignment: .leading, spacing: 13) {
-            Label(lang.text("At the campus desk"), systemImage: "mappin.and.ellipse")
+            Label(lang.text("In-person conversations"), systemImage: "person.2")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(CampusStyle.signal)
-            Text(lang.text("Take the question with you."))
+            Text(lang.text("Bring your question."))
                 .font(.largeTitle.weight(.bold))
                 .foregroundStyle(.white)
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityAddTraits(.isHeader)
-            Text(lang.text("Show your question in Chinese. Keep the answer in both languages."))
+            Text(lang.text("Ask in their language. Keep the answer in both."))
                 .font(.subheadline)
                 .foregroundStyle(.white.opacity(0.92))
                 .fixedSize(horizontal: false, vertical: true)

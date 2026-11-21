@@ -434,18 +434,14 @@ struct ReviewReplyView: View {
             }
             .buttonStyle(DeskButtonStyle(tone: .soft))
 
-            if !missing.isEmpty {
-                Divider()
-                Text(lang.text("To ask"))
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                ForEach(missing) { kind in
-                    Button {
-                        followUp = .init(title: "Follow-up question", text: kind.question)
-                    } label: {
-                        Label(kind.question.preferred(lang), systemImage: "questionmark.bubble")
-                    }
+            if let questions = CardContent.followUp(for: missing) {
+                Button {
+                    followUp = questions
+                } label: {
+                    Label(lang.text("Show follow-up questions"), systemImage: "questionmark.bubble")
                 }
+                .buttonStyle(DeskButtonStyle(tone: .soft))
+                .accessibilityIdentifier("review-follow-up")
             }
         }
     }

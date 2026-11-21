@@ -5,6 +5,14 @@ struct CardContent: Identifiable {
     let title: String
     let text: BilingualText
     var usesLargeType = true
+
+    static func followUp(for kinds: [RequirementKind]) -> Self? {
+        guard !kinds.isEmpty else { return nil }
+        return .init(title: "Follow-up questions", text: .init(
+            english: kinds.map { $0.question.english }.joined(separator: "\n\n"),
+            chinese: kinds.map { $0.question.chinese }.joined(separator: "\n\n")
+        ))
+    }
 }
 
 struct ShowCardView: View {
@@ -13,11 +21,9 @@ struct ShowCardView: View {
     @ScaledMetric(relativeTo: .largeTitle) private var displaySize: CGFloat = 38
     @State private var primary: CardLanguage
     let card: CardContent
-    let recordReply: (() -> Void)?
 
-    init(card: CardContent, recordReply: (() -> Void)? = nil) {
+    init(card: CardContent) {
         self.card = card
-        self.recordReply = recordReply
         _primary = State(initialValue: card.text.chinese.isEmpty ? .english : .chinese)
     }
 
@@ -47,27 +53,21 @@ struct ShowCardView: View {
                     .accessibilityIdentifier("swap-card-languages")
                 }
             }
-            .safeAreaInset(edge: .bottom) {
-                if let recordReply {
-                    Button(action: recordReply) {
-                        Label(lang.text("Record reply"), systemImage: "text.bubble")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(DeskButtonStyle(tone: .primary))
-                    .accessibilityIdentifier("translate-card-reply")
-                    .campusActionBar()
-                }
-            }
         }
     }
 
     private var primaryPanel: some View {
         VStack(alignment: .leading, spacing: 20) {
             HStack(alignment: .top) {
-                Text(verbatim: primary.name)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(CampusStyle.signal)
-                    .accessibilityAddTraits(.isHeader)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(lang.text("Show this language"))
+                        .font(.caption)
+                    Text(verbatim: primary.name)
+                        .font(.subheadline.weight(.semibold))
+                }
+                .foregroundStyle(CampusStyle.signal)
+                .accessibilityElement(children: .combine)
+                .accessibilityAddTraits(.isHeader)
                 Spacer(minLength: 8)
                 DeskMark()
             }
@@ -83,10 +83,15 @@ struct ShowCardView: View {
 
     private var secondaryPanel: some View {
         VStack(alignment: .leading, spacing: 9) {
-            Text(verbatim: primary.other.name)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(CampusStyle.accent)
-                .accessibilityAddTraits(.isHeader)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(lang.text("Reference"))
+                    .font(.caption)
+                Text(verbatim: primary.other.name)
+                    .font(.subheadline.weight(.semibold))
+            }
+            .foregroundStyle(CampusStyle.accent)
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isHeader)
             passage(primary.other)
                 .font(.body)
                 .foregroundStyle(CampusStyle.ticketInk)

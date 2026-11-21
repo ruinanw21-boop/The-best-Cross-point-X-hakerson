@@ -1,6 +1,17 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "Bilingual Cards": { "extractionState": "manual", "localizations": { "zh-Hans": { "stringUnit": { "state": "translated", "value": "双语办事卡" } } } },
+    "In-person conversations": { "extractionState": "manual", "localizations": { "zh-Hans": { "stringUnit": { "state": "translated", "value": "当面沟通" } } } },
+    "Bring your question.": { "extractionState": "manual", "localizations": { "zh-Hans": { "stringUnit": { "state": "translated", "value": "带上你的问题。" } } } },
+    "Ask in their language. Keep the answer in both.": { "extractionState": "manual", "localizations": { "zh-Hans": { "stringUnit": { "state": "translated", "value": "用对方熟悉的语言提问，留下双语答复。" } } } },
+    "Choose which language to show when you open the card.": { "extractionState": "manual", "localizations": { "zh-Hans": { "stringUnit": { "state": "translated", "value": "出示时可以交换两种语言的顺序。" } } } },
+    "Show this language": { "extractionState": "manual", "localizations": { "zh-Hans": { "stringUnit": { "state": "translated", "value": "出示给对方" } } } },
+    "Reference": { "extractionState": "manual", "localizations": { "zh-Hans": { "stringUnit": { "state": "translated", "value": "对照" } } } },
+    "Confirmed details": { "extractionState": "manual", "localizations": { "zh-Hans": { "stringUnit": { "state": "translated", "value": "已确认信息" } } } },
+    "Still to confirm": { "extractionState": "manual", "localizations": { "zh-Hans": { "stringUnit": { "state": "translated", "value": "还需要确认" } } } },
+    "Show follow-up questions": { "extractionState": "manual", "localizations": { "zh-Hans": { "stringUnit": { "state": "translated", "value": "出示追问" } } } },
+    "Follow-up questions": { "extractionState": "manual", "localizations": { "zh-Hans": { "stringUnit": { "state": "translated", "value": "需要追问的问题" } } } },
     "Enter translation manually": { "extractionState": "manual", "localizations": { "zh-Hans": { "stringUnit": { "state": "translated", "value": "手填译文" } } } },
     "Use reviewed translation": { "extractionState": "manual", "localizations": { "zh-Hans": { "stringUnit": { "state": "translated", "value": "使用已核对的译文" } } } },
     "Manually reviewed": { "extractionState": "manual", "localizations": { "zh-Hans": { "stringUnit": { "state": "translated", "value": "手动核对" } } } },

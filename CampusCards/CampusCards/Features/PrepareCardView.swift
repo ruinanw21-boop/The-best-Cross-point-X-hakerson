@@ -127,7 +127,7 @@ struct PrepareCardView: View {
                 Label(lang.text("Card preview"), systemImage: "arrow.up.right")
             }
             .buttonStyle(DeskButtonStyle(tone: .soft))
-            Text(lang.text("Chinese appears first when you show this card."))
+            Text(lang.text("Choose which language to show when you open the card."))
                 .font(.footnote)
                 .foregroundStyle(CampusStyle.muted)
         }

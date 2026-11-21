@@ -10,7 +10,6 @@ struct TaskDetailView: View {
     @State private var card: CardContent?
     @State private var reply: ReplyPresentation?
     @State private var replySource: ConversationTurn?
-    @State private var recordAfterCard = false
     @State private var saveError = false
     @State private var showHistory = false
     @State private var savedNotice: UUID?
@@ -24,12 +23,13 @@ struct TaskDetailView: View {
     }
 
     private var lang: CardLanguage { language.wrappedValue }
-    private var checklist: [ChecklistRow] {
-        CampusStyle.ticketOrder.flatMap { kind -> [ChecklistRow] in
-            let items = actions.filter { $0.kind == kind }
-            if items.isEmpty && task.fields.contains(kind) { return [.pending(kind)] }
-            return items.map { .confirmed($0) }
-        }
+    private var confirmedActions: [ActionItem] {
+        CampusStyle.ticketOrder.flatMap { kind in actions.filter { $0.kind == kind } }
+    }
+
+    private var missingRequirements: [RequirementKind] {
+        let answered = Set(actions.map(\.kind))
+        return CampusStyle.ticketOrder.filter { task.fields.contains($0) && !answered.contains($0) }
     }
 
     var body: some View {
@@ -56,16 +56,8 @@ struct TaskDetailView: View {
         .navigationDestination(item: $replySource) { turn in
             ReplySourceView(turn: turn)
         }
-        .fullScreenCover(item: $card, onDismiss: {
-            if recordAfterCard {
-                recordAfterCard = false
-                reply = .init()
-            }
-        }) { content in
-            ShowCardView(card: content) {
-                recordAfterCard = true
-                card = nil
-            }
+        .fullScreenCover(item: $card) { content in
+            ShowCardView(card: content)
         }
         .sheet(item: $reply) { presentation in
             ReviewReplyView(task: task, correcting: presentation.correction, onSaved: { turnID in
@@ -89,33 +81,48 @@ struct TaskDetailView: View {
 
     private var checklistFeed: some View {
         VStack(alignment: .leading, spacing: 14) {
-            DeskHeading(title: lang.text("Action checklist"))
+            DeskHeading(title: lang.text("Confirmed details"))
             if savedNotice != nil {
                 Label(lang.text("Reply saved"), systemImage: "checkmark.circle.fill")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(CampusStyle.accent)
             }
-            if checklist.isEmpty {
+            let rows = confirmedActions
+            if rows.isEmpty {
                 Text(lang.text("Confirmed requirements will appear here."))
                     .foregroundStyle(CampusStyle.muted)
             } else {
-                let rows = checklist
-                VStack(alignment: .leading, spacing: 12) {
-                    ForEach(rows) { row in
-                        TicketRule()
-                        switch row {
-                        case .confirmed(let item): actionRow(item)
-                        case .pending(let kind): pendingRow(kind)
+                TicketSurface {
+                    VStack(alignment: .leading, spacing: 10) {
+                        ForEach(rows) { item in
+                            if item.id != rows.first?.id { TicketRule() }
+                            actionRow(item)
                         }
                     }
-                    TicketRule()
                 }
-            }
-            if !actions.isEmpty {
                 Button(action: showChecklist) {
                     Label(lang.text("Show checklist"), systemImage: "text.rectangle")
                 }
                 .buttonStyle(DeskButtonStyle(tone: .soft))
+            }
+            let missing = missingRequirements
+            if !turns.isEmpty, let questions = CardContent.followUp(for: missing) {
+                TicketRule()
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(lang.text("Still to confirm"))
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(CampusStyle.pending)
+                    Text(verbatim: missing.map { lang.text($0.label) }.joined(separator: lang == .chinese ? "、" : ", "))
+                        .font(.subheadline)
+                        .foregroundStyle(CampusStyle.muted)
+                    Button {
+                        card = questions
+                    } label: {
+                        Label(lang.text("Show follow-up questions"), systemImage: "questionmark.bubble")
+                    }
+                    .buttonStyle(DeskButtonStyle(tone: .soft))
+                    .accessibilityIdentifier("show-follow-up")
+                }
             }
         }
     }
@@ -202,21 +209,6 @@ struct TaskDetailView: View {
         .accessibilityIdentifier("record-reply")
     }
 
-    private func pendingRow(_ kind: RequirementKind) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            TicketField(kind: kind, text: .init())
-            Button {
-                card = .init(title: "Follow-up question", text: kind.question)
-            } label: {
-                Label(kind.question.preferred(lang), systemImage: "questionmark.bubble")
-                    .frame(minHeight: 44, alignment: .leading)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.borderless)
-            .font(.subheadline)
-        }
-    }
-
     private func actionRow(_ item: ActionItem) -> some View {
         HStack(alignment: .top, spacing: 12) {
             if item.kind == .material {
@@ -299,10 +291,7 @@ struct TaskDetailView: View {
     }
 
     private func showChecklist() {
-        let confirmed: [ActionItem] = checklist.compactMap { row in
-            if case .confirmed(let item) = row { return item }
-            return nil
-        }
+        let confirmed = confirmedActions
         var text = BilingualText()
         for cardLanguage in CardLanguage.allCases {
             text[cardLanguage] = confirmed.map { item in
@@ -318,18 +307,6 @@ struct TaskDetailView: View {
             try persist(TaskStore(context: context))
         } catch {
             saveError = true
-        }
-    }
-}
-
-private enum ChecklistRow: Identifiable {
-    case confirmed(ActionItem)
-    case pending(RequirementKind)
-
-    var id: String {
-        switch self {
-        case .confirmed(let item): item.id.uuidString
-        case .pending(let kind): kind.rawValue
         }
     }
 }

@@ -140,7 +140,7 @@ struct TicketField: View {
 
 struct DeskMark: View {
     var body: some View {
-        Image(systemName: "arrow.turn.up.right")
+        Image(systemName: "bubble.left.and.bubble.right")
             .font(.system(size: 17, weight: .bold))
             .frame(width: 39, height: 39)
             .foregroundStyle(CampusStyle.actionFill)
