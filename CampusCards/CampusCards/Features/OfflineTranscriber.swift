@@ -1,3 +1,4 @@
+import CoreML
 import Foundation
 import WhisperKit
 
@@ -10,7 +11,20 @@ actor OfflineTranscriber {
     static let shared = OfflineTranscriber()
 
     private let diagnosticLogging: Bool
-    private var engine: WhisperKit?
+    private struct LoadedModel {
+        let kit: WhisperKit
+        let suppressedTokens: [Int]
+    }
+
+    private struct GenerationConfig: Decodable {
+        let suppressTokens: [Int]
+
+        enum CodingKeys: String, CodingKey {
+            case suppressTokens = "suppress_tokens"
+        }
+    }
+
+    private var engine: LoadedModel?
     private var lastDecode: Task<Void, Never>?
 
     init(diagnosticLogging: Bool = false) {
@@ -35,20 +49,29 @@ actor OfflineTranscriber {
     }
 
     private func decode(file: URL, language: CardLanguage) async throws -> String {
-        let kit = try await loadEngine()
+        let model = try await loadEngine()
         try Task.checkCancellation()
         // A released reply is a complete utterance, including replies shorter than a second.
         let options = DecodingOptions(task: .transcribe, language: language == .chinese ? "zh" : "en",
                                       detectLanguage: false, skipSpecialTokens: true, withoutTimestamps: true,
-                                      windowClipTime: 0)
-        let results = try await kit.transcribe(audioPath: file.path, decodeOptions: options)
+                                      windowClipTime: 0, suppressBlank: true, suppressTokens: model.suppressedTokens,
+                                      firstTokenLogProbThreshold: nil)
+        #if targetEnvironment(simulator)
+        // WhisperKit sets CPU-only model execution on Simulator. Its iOS 18+
+        // token sampler also uses MLTensor, which has a separate compute policy.
+        let results = try await withMLTensorComputePolicy(.cpuOnly) {
+            try await model.kit.transcribe(audioPath: file.path, decodeOptions: options)
+        }
+        #else
+        let results = try await model.kit.transcribe(audioPath: file.path, decodeOptions: options)
+        #endif
         try Task.checkCancellation()
         let text = results.map(\.text).joined(separator: " ").cleaned
         guard !text.isEmpty else { throw OfflineTranscriptionError.noRecognizedSpeech }
         return text
     }
 
-    private func loadEngine() async throws -> WhisperKit {
+    private func loadEngine() async throws -> LoadedModel {
         if let engine { return engine }
         guard let root = Bundle.main.url(forResource: "OfflineSpeech", withExtension: nil) else {
             throw OfflineTranscriptionError.resourcesUnavailable
@@ -56,6 +79,11 @@ actor OfflineTranscriber {
         let model = root.appendingPathComponent("openai_whisper-base", isDirectory: true)
         let tokenizer = root.appendingPathComponent("tokenizer", isDirectory: true)
         do {
+            // WhisperKit 1.1.1 defaults to an empty suppression list. Use the base
+            // model's generation config to exclude non-speech and subtitle markers.
+            let generation = try JSONDecoder().decode(
+                GenerationConfig.self, from: Data(contentsOf: model.appendingPathComponent("generation_config.json"))
+            )
             let localTokenizer = try await AutoTokenizerWrapper.from(modelFolder: tokenizer)
             let config = WhisperKitConfig(modelFolder: model.path, verbose: diagnosticLogging, logLevel: .debug,
                                           load: false, download: false)
@@ -68,8 +96,9 @@ actor OfflineTranscriber {
             guard kit.audioEncoder.embedSize == 512, kit.textDecoder.logitsSize == 51_865 else {
                 throw OfflineTranscriptionError.resourcesUnavailable
             }
-            engine = kit
-            return kit
+            let loaded = LoadedModel(kit: kit, suppressedTokens: generation.suppressTokens)
+            engine = loaded
+            return loaded
         } catch {
             try Task.checkCancellation()
             throw OfflineTranscriptionError.resourcesUnavailable
