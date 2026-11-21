@@ -1,4 +1,4 @@
-# Campus Cards · Text demo
+# Campus Cards · Reply review
 
 ## English
 
@@ -7,8 +7,8 @@ Open `CampusCards.xcodeproj` in Xcode, select the shared **CampusCards** scheme 
 ### Demo walkthrough
 
 1. On the English home screen, choose **New task → Submit enrollment documents → Create task**. Open **Show card** and try **Swap card languages**.
-2. Choose **Record reply → Directions**. Enter `去学生服务中心`, review, and save.
-3. Record a **Requirements** reply. Enter `周五下午四点前，把护照复印件交到一楼服务台。` In review, fill in the fields below. Under **Set an exact time**, choose Friday and set the clock from 4:00 p.m. to 3:30 p.m. Confirm and save.
+2. Choose **Record reply → Directions**. Set the reply language to Chinese and enter `去学生服务中心`. Open **Review reply**, enter the Windows service base address in the translation section, and tap **Translate to English**. Edit the result and tap **Confirm and save**.
+3. Record a **Requirements** reply. Enter `周五下午四点前，把护照复印件交到一楼服务台。` In review, check the translation and fill in the fields below. Under **Set an exact time**, choose Friday and set the clock from 4:00 p.m. to 3:30 p.m. Confirm and save.
 4. Relaunch the app and open the task. The checklist should say **By 3:30 p.m. on Friday** and **周五下午三点半前**. The original reply should still say **四点**.
 5. Create **Collect lost property**. Save a requirements reply with only the library reception location. Open the **What do I need to bring?** card and save a second reply with **Student ID / 学生证**. Check the item, complete the task, then reopen it.
 6. Try the globe menu mid-reply. The current draft should stay open and the selected interface language should persist across launches.
@@ -19,7 +19,7 @@ Open `CampusCards.xcodeproj` in Xcode, select the shared **CampusCards** scheme 
 | Location | Service desk, Level 1 | 一楼服务台 |
 | Lost-property location | Library reception | 图书馆前台 |
 
-This demo uses keyboard entry, built-in bilingual questions, and local storage. The campus instructions are fictional.
+The app keeps pending replies and confirmed history on the device. Requesting a translation sends the reviewed source text and its language direction to the configured service. The campus instructions are fictional.
 
 ## 简体中文
 
@@ -28,10 +28,45 @@ This demo uses keyboard entry, built-in bilingual questions, and local storage. 
 ### 演示流程
 
 1. 从英文首页新建「补交入学材料」，出示大字问句，再交换中英文顺序。
-2. 录入「去学生服务中心」，选择「指路」，核对并保存。
-3. 再录入一轮「办事要求」原话「周五下午四点前，把护照复印件交到一楼服务台。」按上表手填双语材料和地点。打开「设置明确时间」，选择周五，把 16:00 改成 15:30 后保存。
+2. 选择「记录答复 → 指路」，把答复语言设为中文，输入「去学生服务中心」。点「核对答复」，填写 Windows 服务地址，然后点「翻译成英文」。检查或编辑译文后点「确认并保存」。
+3. 再录入一轮「办事要求」原话「周五下午四点前，把护照复印件交到一楼服务台。」检查译文，并按上表手填双语材料和地点。打开「设置明确时间」，选择周五，把 16:00 改成 15:30 后保存。
 4. 重启 App 后打开该事项，清单中英文应显示下午三点半，历史原话仍保留「四点」。
 5. 新建「领取失物」，先确认图书馆前台，再出示追问卡并补录学生证。勾选学生证、办结，再重新打开事项。
 6. 录到一半时用地球图标切换界面语言，继续编辑原草稿。重启后检查语言偏好。
 
-本版使用键盘、内置双语问句和本地存储。演示里的校园办事要求为虚构示例。
+演示里的校园办事要求为虚构示例。
+
+### 05 真机联调
+
+1. 在 Windows 的 04 工程目录启动已验收的翻译服务，保持窗口打开。使用原先只允许测试手机访问的入口时，在 PowerShell 运行以下命令。两台设备连接同一 Wi-Fi，Windows 的入站规则需允许这台手机访问 TCP 8000。
+
+   ```powershell
+   $wifiIP = Read-Host 'Windows 的 Wi-Fi IPv4 地址'
+   $phoneIP = Read-Host 'iPhone 的 Wi-Fi IPv4 地址'
+   .\.venv\Scripts\python.exe -m translation_service.iphone_check --host $wifiIP --phone $phoneIP
+   ```
+
+2. 用 Xcode 将本分支的 CampusCards 安装到 iPhone。进入「事项详情 → 记录答复 → 核对答复」，在译文区输入服务根地址，例如 `http://192.168.1.23:8000`，用实际电脑地址替换示例 IP。点翻译后允许 App 访问本地网络。地址可以在「更改服务地址」中修改。智谱密钥由 Windows 服务读取。
+3. 第一轮选 English，键入 “Which desk should I go to?”，点「翻译成中文」。修改一处译文，返回上一页，选「取消 → 保留草稿并关闭」。「交流记录」此时应维持原来的条数。重新打开「记录答复」，核对修改仍在，再点「确认并保存」。
+4. 第二轮选「简体中文」，键入“请把护照复印件交到一楼服务台”，点「翻译成英文」。确认后退出并重开 App，原事项应有两轮新答复，各自保留核对后的译文。改过原文的记录可展开「最初原话」。
+5. 验证重试时，先停掉 Windows 服务，再发起翻译。原文和行动字段应可继续编辑。用同一地址重启服务，点「重试翻译」，然后确认保存。
+
+### 自动化用例和语音交接
+
+在 Xcode 选择共享的 **CampusCards** scheme 和 iOS 18 或更新的 iPhone 模拟器，按 **⌘U** 运行测试。
+
+| 验证内容 | 复现方式 |
+| --- | --- |
+| HTTP 请求与服务错误 | `TranslationClientTests` 拦截实际 URLSession 请求，检查两种方向、三个 JSON 字段、断网以及 400、502、504 的处理；乱序用例拦住 A、B 两个 HTTP 请求，先放行 B，再放行 A。 |
+| 乱序及切换草稿 | `ReplyWorkflowTests` 先发 16:00 的 A，再发 15:30 的 B，先完成 B，随后投递 A 的成功或错误；也覆盖手改译文、换事项、改语言和转写中键入。 |
+| 草稿恢复、正式保存 | 同一套测试恢复未完成的草稿，并在支持 SwiftData 的测试目标中模拟保存失败、以相同草稿 ID 重试和重复确认，重新打开磁盘库检查两轮答复。 |
+| 本地转写 | 03 接入时，在 `TaskDetailView` 创建 `ReviewReplyView` 处传入 `recognize:`。识别器接收 `ReplyRequestToken` 和答复语言，返回含原 token、语言、原始转写文本及录音相对路径的 `ReplyTranscription`。核对页会丢弃用户改字或离开后才回来的结果。当前测试注入固定中文转写，真麦克风由 03 接入后验收。 |
+
+**2026-11-21 验证结果**
+
+| 环境 | 实际结果 |
+| --- | --- |
+| Windows / WSL，Swift 6.4.3 | 5 项草稿 XCTest、6 项 HTTP XCTest 全部通过。所有 App 与测试 Swift 源文件通过语法解析。Linux 测试使用去除 SwiftData 注解的模型副本。 |
+| Swift 客户端 → 04 Flask/Waitress，固定翻译器 | 经回环 HTTP 验证英译中、中译英和 502、504 的错误映射。 |
+| iPhone Safari → 04 Windows 服务 → 智谱 | 此前两种方向均返回 HTTP 200，已在 Safari 核对。 |
+| iOS 原生 App | 待用 Xcode 构建、运行含 SwiftData 的测试，并在 iPhone 上验证本地网络授权、查看两轮译文及重开历史。真麦克风输入还依赖任务 03。 |

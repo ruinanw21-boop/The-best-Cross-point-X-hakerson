@@ -4,6 +4,12 @@ import SwiftData
 @MainActor
 struct TaskStore {
     let context: ModelContext
+    private let saveChanges: () throws -> Void
+
+    init(context: ModelContext, saveChanges: (() throws -> Void)? = nil) {
+        self.context = context
+        self.saveChanges = saveChanges ?? { try context.save() }
+    }
 
     enum Failure: Error {
         case invalidTask, invalidReply, invalidCorrection
@@ -34,6 +40,7 @@ struct TaskStore {
         taskFetch.fetchLimit = 1
         guard let task = try context.fetch(taskFetch).first else { throw Failure.invalidTask }
         guard !draft.original.cleaned.isEmpty else { throw Failure.invalidReply }
+        if draft.originalText != nil && !draft.canConfirm { throw Failure.invalidReply }
 
         let correction: ActionItem?
         let fields = draft.confirmedFields
@@ -84,7 +91,7 @@ struct TaskStore {
 
     private func save() throws {
         do {
-            try context.save()
+            try saveChanges()
         } catch {
             context.rollback()
             throw error

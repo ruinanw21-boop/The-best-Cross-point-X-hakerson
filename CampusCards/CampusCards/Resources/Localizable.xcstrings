@@ -89,6 +89,39 @@
         }
       }
     },
+    "Change service address": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更改服务地址"
+          }
+        }
+      }
+    },
+    "Check the source text and language, then translate again.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请检查原文和所选语言，再次翻译。"
+          }
+        }
+      }
+    },
+    "Chinese translation": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "中文译文"
+          }
+        }
+      }
+    },
     "Chinese translation (optional)": {
       "extractionState": "manual",
       "localizations": {
@@ -129,6 +162,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "关闭"
+          }
+        }
+      }
+    },
+    "Close this draft?": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "如何处理这份草稿？"
           }
         }
       }
@@ -221,6 +265,17 @@
         }
       }
     },
+    "Couldn’t reach the service. Check Wi-Fi and the service address, then retry.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法连接翻译服务，请检查 Wi-Fi 和服务地址后重试。"
+          }
+        }
+      }
+    },
     "Couldn’t save changes": {
       "extractionState": "manual",
       "localizations": {
@@ -228,6 +283,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "未能保存修改"
+          }
+        }
+      }
+    },
+    "Couldn’t transcribe. Try again or type the reply.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "转写失败，请重试或键入原话。"
           }
         }
       }
@@ -287,6 +353,28 @@
         }
       }
     },
+    "Edit translation": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "编辑译文"
+          }
+        }
+      }
+    },
+    "English translation": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "英文译文"
+          }
+        }
+      }
+    },
     "English translation (optional)": {
       "extractionState": "manual",
       "localizations": {
@@ -305,6 +393,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "英文内容"
+          }
+        }
+      }
+    },
+    "Enter a service address with http:// or https:// and a port if needed.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请填写以 http:// 或 https:// 开头的服务地址，并按需填写端口。"
+          }
+        }
+      }
+    },
+    "Enter the Wi-Fi address and port of the Windows translation service.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "填写 Windows 翻译服务在当前 Wi-Fi 下的地址和端口。"
           }
         }
       }
@@ -338,6 +448,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "进行中"
+          }
+        }
+      }
+    },
+    "Keep draft and close": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保留草稿并关闭"
           }
         }
       }
@@ -452,6 +573,17 @@
         }
       }
     },
+    "Original wording": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最初原话"
+          }
+        }
+      }
+    },
     "Question card": {
       "extractionState": "manual",
       "localizations": {
@@ -562,6 +694,17 @@
         }
       }
     },
+    "Reply saved": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "答复已保存"
+          }
+        }
+      }
+    },
     "Reply type": {
       "extractionState": "manual",
       "localizations": {
@@ -595,6 +738,17 @@
         }
       }
     },
+    "Retry translation": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重试翻译"
+          }
+        }
+      }
+    },
     "Review reply": {
       "extractionState": "manual",
       "localizations": {
@@ -602,6 +756,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "核对答复"
+          }
+        }
+      }
+    },
+    "Review source text": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "核对原文"
           }
         }
       }
@@ -646,6 +811,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "办事场景"
+          }
+        }
+      }
+    },
+    "Service address": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "服务地址"
           }
         }
       }
@@ -760,6 +936,39 @@
         }
       }
     },
+    "The service returned an unreadable response. Check the address and retry.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法读取服务响应，请检查服务地址后重试。"
+          }
+        }
+      }
+    },
+    "The translation service is unavailable. Try again.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "翻译服务暂时不可用，请重试。"
+          }
+        }
+      }
+    },
+    "The translation service timed out. Try again.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "翻译服务响应超时，请重试。"
+          }
+        }
+      }
+    },
     "Thursday": {
       "extractionState": "manual",
       "localizations": {
@@ -800,6 +1009,50 @@
           "stringUnit": {
             "state": "translated",
             "value": "待准备"
+          }
+        }
+      }
+    },
+    "Transcribing…": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在转写…"
+          }
+        }
+      }
+    },
+    "Translate to Chinese": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "翻译成中文"
+          }
+        }
+      }
+    },
+    "Translate to English": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "翻译成英文"
+          }
+        }
+      }
+    },
+    "Translating…": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在翻译…"
           }
         }
       }

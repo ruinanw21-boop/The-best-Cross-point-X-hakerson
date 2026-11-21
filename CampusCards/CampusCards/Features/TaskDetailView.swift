@@ -9,6 +9,7 @@ struct TaskDetailView: View {
     @Query private var turns: [ConversationTurn]
     @State private var card: CardContent?
     @State private var reply: ReplyPresentation?
+    @State private var savedTurnID: UUID?
     @State private var recordAfterCard = false
     @State private var saveError = false
 
@@ -101,7 +102,10 @@ struct TaskDetailView: View {
             }
         }
         .sheet(item: $reply) { presentation in
-            ReviewReplyView(task: task, correcting: presentation.correction)
+            ReviewReplyView(task: task, correcting: presentation.correction, onSaved: { id in
+                savedTurnID = id
+            })
+            .id(presentation.id)
         }
         .modifier(SaveErrorAlert(presented: $saveError))
     }
@@ -195,6 +199,12 @@ struct TaskDetailView: View {
             Label(lang.text(turn.kind.label), systemImage: turn.kind == .directions ? "location" : "bubble.left")
                 .font(.subheadline.weight(.semibold))
 
+            if turn.id == savedTurnID {
+                Label(lang.text("Reply saved"), systemImage: "checkmark.circle")
+                    .font(.caption)
+                    .accessibilityIdentifier("reply-saved")
+            }
+
             Text(turn.confirmedAt, format: .dateTime.month().day().hour().minute())
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -206,6 +216,15 @@ struct TaskDetailView: View {
             Text(verbatim: turn.original)
                 .environment(\.locale, turn.originalLanguage.locale)
                 .accessibilityIdentifier("history-original")
+
+            if let initial = turn.originalText, initial != turn.original {
+                DisclosureGroup(lang.text("Original wording")) {
+                    Text(verbatim: initial)
+                        .environment(\.locale, turn.originalLanguage.locale)
+                        .textSelection(.enabled)
+                }
+                .font(.footnote)
+            }
 
             if !turn.translation.isEmpty {
                 Text(verbatim: turn.translation)
