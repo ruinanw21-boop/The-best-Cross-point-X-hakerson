@@ -9,10 +9,6 @@ enum OfflineTranscriptionError: Error {
 actor OfflineTranscriber {
     static let shared = OfflineTranscriber()
 
-    static var computeOptions: ModelComputeOptions {
-        ModelComputeOptions()
-    }
-
     private let diagnosticLogging: Bool
     private var engine: WhisperKit?
     private var lastDecode: Task<Void, Never>?
@@ -61,8 +57,7 @@ actor OfflineTranscriber {
         let tokenizer = root.appendingPathComponent("tokenizer", isDirectory: true)
         do {
             let localTokenizer = try await AutoTokenizerWrapper.from(modelFolder: tokenizer)
-            let config = WhisperKitConfig(modelFolder: model.path, computeOptions: Self.computeOptions,
-                                          verbose: diagnosticLogging, logLevel: .debug,
+            let config = WhisperKitConfig(modelFolder: model.path, verbose: diagnosticLogging, logLevel: .debug,
                                           load: false, download: false)
             let kit = try await WhisperKit(config)
             // v1.1.1 would otherwise fall back to the Hub after a local tokenizer error,

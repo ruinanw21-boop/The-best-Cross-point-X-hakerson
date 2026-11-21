@@ -36,24 +36,14 @@ final class OfflineSpeechTests: XCTestCase {
         let channels = [0, 1, 2, 64, 256]
         // Reference values from the bundled weights evaluated in float32.
         let reference = [1.3633, 0.1955, 1.3726, 0.0648, 2.1413]
-        let url = model.appendingPathComponent("AudioEncoder.mlmodelc")
-        for (label, units, optimize) in [("selected", OfflineTranscriber.computeOptions.audioEncoderCompute, false),
-                                          ("gpu", MLComputeUnits.cpuAndGPU, false), ("optimizedCPU", .cpuOnly, true),
-                                          ("optimizedAll", .all, true)] {
-            let config = MLModelConfiguration()
-            config.computeUnits = units
-            if optimize { config.optimizationHints.specializationStrategy = .fastPrediction }
-            let encoder = AudioEncoder()
-            encoder.model = try await MLModel.load(contentsOf: url, configuration: config)
-            let embedding = try await encoder.encodeFeatures(mel)
-            let values = try XCTUnwrap(embedding)
-            let readings = channels.map { values[[0, $0, 0, 30] as [NSNumber]].doubleValue }
-            print("Fixture encoder \(label) mel=\(mel[[0, 10, 0, 60]].doubleValue) values=\(readings)")
-            if label == "selected" {
-                for (result, expected) in zip(readings, reference) {
-                    XCTAssertEqual(result, expected, accuracy: 0.15)
-                }
-            }
+        let encoder = AudioEncoder()
+        try await encoder.loadModel(at: model.appendingPathComponent("AudioEncoder.mlmodelc"),
+                                    computeUnits: ModelComputeOptions().audioEncoderCompute)
+        let embedding = try await encoder.encodeFeatures(mel)
+        let values = try XCTUnwrap(embedding)
+        for (channel, expected) in zip(channels, reference) {
+            XCTAssertEqual(values[[0, channel, 0, 30] as [NSNumber]].doubleValue,
+                           expected, accuracy: 0.15, "encoder channel \(channel)")
         }
     }
 
