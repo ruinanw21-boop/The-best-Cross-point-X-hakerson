@@ -30,6 +30,7 @@
 		7915226653A39D6971E3581E /* ReplyAudioTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13093E69C18973991CA16DA6 /* ReplyAudioTests.swift */; };
 		BC6AE6BAAF4185180FDC74D8 /* OfflineSpeechTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECD50F2AE161E98AEB260EA2 /* OfflineSpeechTests.swift */; };
 		58A28A159739EA24AA860554 /* SpeechSamples in Resources */ = {isa = PBXBuildFile; fileRef = 4631E41604449693FA4C07AC /* SpeechSamples */; };
+		C8D0217CEB35146224F9F1B8 /* OfflineSpeech in Resources */ = {isa = PBXBuildFile; fileRef = 14AFFD70D81353C685846AE4 /* OfflineSpeech */; };
 		164028F3B7B6C08B82F9060D /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = 05B15AA87C1E0138CEB2370A /* WhisperKit */; };
 /* End PBXBuildFile section */
 
@@ -70,7 +71,7 @@
 		13093E69C18973991CA16DA6 /* ReplyAudioTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReplyAudioTests.swift; sourceTree = "<group>"; };
 		ECD50F2AE161E98AEB260EA2 /* OfflineSpeechTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineSpeechTests.swift; sourceTree = "<group>"; };
 		4631E41604449693FA4C07AC /* SpeechSamples */ = {isa = PBXFileReference; lastKnownFileType = folder; path = SpeechSamples; sourceTree = "<group>"; };
-		14AFFD70D81353C685846AE4 /* OfflineSpeech */ = {isa = PBXFileReference; lastKnownFileType = folder; path = OfflineSpeech; sourceTree = "<group>"; };
+		14AFFD70D81353C685846AE4 /* OfflineSpeech */ = {isa = PBXFileReference; lastKnownFileType = folder; path = OfflineSpeech; sourceTree = CAMPUS_SPEECH_RESOURCES_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -209,7 +210,6 @@
 				87CEE4FD5CB4C0BDA4DFEEA0 /* Sources */,
 				7DB6ECB1DBD50F7B6FA66DD5 /* Frameworks */,
 				BD597F82DE3AD8D36ECA3AE7 /* Resources */,
-				37AA60EA5DD54183B46C9C47 /* Bundle offline speech */,
 			);
 			buildRules = (
 			);
@@ -272,31 +272,12 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C8D0217CEB35146224F9F1B8 /* OfflineSpeech in Resources */,
 				AE774FC2D40A1A81396926B2 /* Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
-
-/* Begin PBXShellScriptBuildPhase section */
-		37AA60EA5DD54183B46C9C47 /* Bundle offline speech */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = ();
-			inputPaths = (
-				"$(SRCROOT)/Scripts/bundle_offline_speech.sh",
-				"$(SRCROOT)/Scripts/offline-speech.sha256",
-				"$(SRCROOT)/CampusCards/Resources/OfflineSpeech",
-			);
-			name = "Bundle offline speech";
-			outputPaths = (
-				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/OfflineSpeech",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "/bin/sh \"$SCRIPT_INPUT_FILE_0\"\n";
-		};
-/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		87CEE4FD5CB4C0BDA4DFEEA0 /* Sources */ = {
@@ -381,6 +362,8 @@
 		1E2E67F111F111E446D58E6C /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CAMPUS_SPEECH_RESOURCES_DIR = "$(SRCROOT)/CampusCards/Resources";
+				"CAMPUS_SPEECH_RESOURCES_DIR[sdk=iphonesimulator*]" = "$(SRCROOT)/CampusCards/Resources/Simulator";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -422,6 +405,8 @@
 		AA9B1D3BE1353EBD76471D11 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CAMPUS_SPEECH_RESOURCES_DIR = "$(SRCROOT)/CampusCards/Resources";
+				"CAMPUS_SPEECH_RESOURCES_DIR[sdk=iphonesimulator*]" = "$(SRCROOT)/CampusCards/Resources/Simulator";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;

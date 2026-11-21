@@ -30,18 +30,34 @@ jobs:
             device: iPhone 17 Pro
     env:
       DEVELOPER_DIR: /Applications/Xcode_${{ matrix.xcode }}.app/Contents/Developer
+      IOS_VERSION: ${{ matrix.ios }}
+      DEVICE_NAME: ${{ matrix.device }}
     steps:
       - uses: actions/checkout@v4
+      - name: Boot the matching iOS Simulator
+        id: simulator
+        run: |
+          sudo xcode-select --switch "$DEVELOPER_DIR"
+          sudo xcodebuild -runFirstLaunch
+          xcodebuild -version
+          runtime="com.apple.CoreSimulator.SimRuntime.iOS-${IOS_VERSION//./-}"
+          device_type="com.apple.CoreSimulator.SimDeviceType.${DEVICE_NAME// /-}"
+          xcrun simctl list runtimes
+          if ! xcrun simctl list runtimes --json | jq -e --arg runtime "$runtime" 'any(.runtimes[]; .identifier == $runtime and .isAvailable)' >/dev/null; then
+            xcodebuild -downloadPlatform iOS -buildVersion "$IOS_VERSION"
+          fi
+          udid=$(xcrun simctl create "CampusCards $DEVICE_NAME" "$device_type" "$runtime")
+          xcrun simctl bootstatus "$udid" -b
+          echo "udid=$udid" >> "$GITHUB_OUTPUT"
       - name: Prepare bundled speech resources
         run: python3 CampusCards/Scripts/prepare_offline_speech.py
       - name: Run CampusCards on iPhone Simulator
         working-directory: CampusCards
         run: |
-          xcodebuild -version
           xcodebuild -project CampusCards.xcodeproj -scheme CampusCards \
-            -destination "platform=iOS Simulator,name=${{ matrix.device }},OS=${{ matrix.ios }},arch=arm64" \
+            -destination "platform=iOS Simulator,id=${{ steps.simulator.outputs.udid }}" \
             -parallel-testing-enabled NO -resultBundlePath "$RUNNER_TEMP/CampusCards.xcresult" \
-            test
+            ARCHS=arm64 test
       - name: Share the tested Xcode project with bundled speech resources
         if: matrix.xcode == '26.2'
         uses: actions/upload-artifact@v4
