@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="referrer" content="no-referrer">
+  <title>双向翻译验收 · 双语办事卡</title>
+  <style>
+    :root { font-family: "Source Sans 3", system-ui, sans-serif; color: #152d32; background: #f2f6f5; }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    main { max-width: 34rem; margin: 0 auto; padding: 2rem 1rem 3rem; }
+    h1 { font-size: 1.85rem; margin: 0 0 .5rem; }
+    p { line-height: 1.6; margin: .25rem 0; }
+    .intro, .label { color: #446065; }
+    section { background: white; border: 1px solid #ccdcda; border-radius: .85rem; padding: 1rem; margin: 1rem 0; }
+    h2 { font-size: 1.05rem; margin: 0 0 .8rem; }
+    .label { font-size: .88rem; margin-top: .8rem; }
+    .output { font-weight: 600; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .error { color: #a12922; }
+    button { width: 100%; min-height: 3rem; border: 0; border-radius: .6rem; padding: .65rem; font: inherit; font-weight: 650; background: #075951; color: white; }
+    button:disabled { opacity: .65; }
+    button:focus-visible { outline: .2rem solid #298a84; outline-offset: .2rem; }
+    #confirm { margin-top: .75rem; }
+    #status { margin-top: .8rem; }
+    @media (prefers-color-scheme: dark) {
+      :root { color: #e1eeeb; background: #142121; }
+      section { background: #1a2b2a; border-color: #3e5550; }
+      .intro, .label { color: #b5c5c0; }
+      button { background: #96d6c9; color: #122923; }
+      .error { color: #ffa79b; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>双向翻译验收</h1>
+    <p class="intro">点按测试后，手机会依次提交下面两段原文。请核对返回的译文。</p>
+    <section>
+      <h2>英译中</h2>
+      <p class="label">英文原文</p>
+      <p id="source-en" lang="en">Which desk should I go to?</p>
+      <p class="label">中文译文</p>
+      <p id="output-zh" class="output" aria-live="polite">待测试</p>
+    </section>
+    <section>
+      <h2>中译英</h2>
+      <p class="label">中文原文</p>
+      <p id="source-zh">请把护照复印件交到一楼服务台。</p>
+      <p class="label">英文译文</p>
+      <p id="output-en" class="output" aria-live="polite">待测试</p>
+    </section>
+    <button type="button" id="run">测试双向翻译</button>
+    <button type="button" id="confirm" hidden>我已看到两条译文</button>
+    <p id="status" role="status"></p>
+  </main>
+  <script>
+    const run = document.getElementById('run');
+    const confirmDisplay = document.getElementById('confirm');
+    const status = document.getElementById('status');
+    const samples = [
+      { key: 'en_zh', label: '英译中', source: 'en', target: 'zh' },
+      { key: 'zh_en', label: '中译英', source: 'zh', target: 'en' }
+    ];
+    const translations = {};
+
+    async function post(path, payload) {
+      let response;
+      try {
+        response = await fetch(path, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      } catch {
+        throw new Error('未收到 HTTP 响应，请检查网络连接');
+      }
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        const code = data && data.error && data.error.code;
+        throw new Error('HTTP ' + response.status + ' · ' + (code || '未返回错误码'));
+      }
+      return { data, statusCode: response.status };
+    }
+
+    run.addEventListener('click', async () => {
+      run.disabled = true;
+      status.textContent = '';
+      for (const sample of samples) {
+        if (translations[sample.key]) continue;
+        const original = document.getElementById('source-' + sample.source);
+        const output = document.getElementById('output-' + sample.target);
+        output.classList.remove('error');
+        output.textContent = '正在翻译…';
+        try {
+          const { data, statusCode } = await post('/translate', {
+            text: original.textContent,
+            source_language: sample.source,
+            target_language: sample.target
+          });
+          if (!data || typeof data.translation !== 'string' || !data.translation.trim()) {
+            throw new Error('HTTP ' + statusCode + ' · 未收到有效译文');
+          }
+          output.lang = sample.target;
+          output.textContent = data.translation;
+          translations[sample.key] = output.textContent;
+        } catch (error) {
+          output.classList.add('error');
+          output.textContent = sample.label + '失败：' + error.message;
+        }
+      }
+      if (samples.every(sample => translations[sample.key])) {
+        run.hidden = true;
+        confirmDisplay.hidden = false;
+        status.textContent = '两条译文均已显示，请核对后确认。';
+      } else {
+        run.textContent = '重试失败的翻译';
+        run.disabled = false;
+      }
+    });
+
+    confirmDisplay.addEventListener('click', async () => {
+      confirmDisplay.disabled = true;
+      status.textContent = '正在提交确认…';
+      try {
+        await post('/displayed', translations);
+        confirmDisplay.hidden = true;
+        status.textContent = '验收完成，手机已确认显示两条译文。';
+      } catch (error) {
+        status.textContent = '提交确认失败：' + error.message;
+        confirmDisplay.textContent = '重新提交显示确认';
+        confirmDisplay.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

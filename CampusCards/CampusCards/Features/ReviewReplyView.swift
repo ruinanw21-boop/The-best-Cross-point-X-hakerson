@@ -415,7 +415,7 @@ struct ReviewReplyView: View {
                     layout {
                         TicketField(kind: field.kind, text: field.effectiveText,
                                     emptyKey: needsAnswer ? "To ask" : "Not added in this reply",
-                                    pending: needsAnswer, edited: field.wasEditedDuringReview == true)
+                                    pending: needsAnswer, edited: field.userEdited)
                         Button(lang.text(field.effectiveText.isEmpty ? "Add" : "Edit")) {
                             editingField = field
                         }
@@ -450,10 +450,9 @@ struct ReviewReplyView: View {
         let exists = draft.fields.contains { $0.id == field.id }
         let removable = exists && field.kind == .material && draft.kind == .requirements
             && draft.fields.filter { $0.kind == .material }.count > 1
-        return RequirementEditorSheet(field: field, removable: removable) { updated in
+        return RequirementEditorSheet(field: field, removable: removable, isCorrection: draft.kind == .correction) { updated in
             if let updated {
-                if exists { draft.applyReviewedField(updated) }
-                else if !updated.effectiveText.isEmpty { draft.fields.append(updated) }
+                draft.applyReviewedField(updated)
             } else {
                 draft.fields.removeAll { $0.id == field.id }
             }
@@ -584,7 +583,7 @@ struct ReviewReplyView: View {
         guard !didRestore else { return }
         didRestore = true
         let cache = ReplyDraftCache()
-        guard let saved = cache.load(taskID: task.id, correctedActionID: draft.correctedActionID) else { return }
+        guard let saved = cache.load(for: draft) else { return }
         // A crash between the SwiftData commit and removing the cache can leave a confirmed draft.
         let id = saved.id
         let match = FetchDescriptor<ConversationTurn>(predicate: #Predicate { $0.id == id })
@@ -685,11 +684,13 @@ private struct RequirementEditorSheet: View {
     @Environment(\.cardLanguage) private var language
     @State private var field: FieldDraft
     let removable: Bool
+    let isCorrection: Bool
     let onApply: (FieldDraft?) -> Void
 
-    init(field: FieldDraft, removable: Bool, onApply: @escaping (FieldDraft?) -> Void) {
+    init(field: FieldDraft, removable: Bool, isCorrection: Bool, onApply: @escaping (FieldDraft?) -> Void) {
         _field = State(initialValue: field)
         self.removable = removable
+        self.isCorrection = isCorrection
         self.onApply = onApply
     }
 
@@ -697,7 +698,7 @@ private struct RequirementEditorSheet: View {
         let lang = language.wrappedValue
         NavigationStack {
             Form {
-                Section { FieldEditor(field: $field) }
+                Section { FieldEditor(field: $field, isCorrection: isCorrection) }
                 if removable {
                     Button(lang.text("Remove material"), role: .destructive) { onApply(nil) }
                 }
@@ -826,17 +827,30 @@ private struct HoldMicrophoneButton: UIViewRepresentable {
 
 private struct FieldEditor: View {
     @Binding var field: FieldDraft
+    let isCorrection: Bool
+    @FocusState private var focusedLanguage: CardLanguage?
+    @State private var textAtFocus = ""
+    @State private var editingTime = false
+    @State private var timeSelection = ConfirmedTime()
     @Environment(\.cardLanguage) private var language
     private var lang: CardLanguage { language.wrappedValue }
 
     var body: some View {
         if field.kind == .deadline {
-            Toggle(lang.text("Set an exact time"), isOn: $field.useExactTime)
+            Toggle(lang.text("Set an exact time"), isOn: Binding(
+                get: { field.useExactTime || editingTime },
+                set: { enabled in
+                    if enabled { editTime() } else { field.useExactTime = false }
+                }
+            ))
                 .accessibilityIdentifier("exact-time")
+                .sheet(isPresented: $editingTime) { exactTimeEditor }
         }
 
-        if field.confirmedTime != nil {
-            exactTimeEditor
+        if let time = field.confirmedTime {
+            LanguageLines(text: time.text, primary: lang)
+            Button(lang.text("Edit time")) { editTime() }
+                .accessibilityIdentifier("edit-deadline")
         } else {
             ForEach(CardLanguage.allCases) { cardLanguage in
                 TextField(lang.text(cardLanguage == .english ? "English value" : "Chinese value"), text: Binding {
@@ -844,8 +858,18 @@ private struct FieldEditor: View {
                 } set: { value in
                     field.edit(value, in: cardLanguage)
                 }, axis: .vertical)
+                .focused($focusedLanguage, equals: cardLanguage)
                 .lineLimit(1...4)
                 .accessibilityIdentifier("\(field.kind.rawValue)-\(cardLanguage.rawValue)")
+            }
+            .onChange(of: focusedLanguage) { previous, current in
+                if let previous, field.text[previous] != textAtFocus {
+                    field.rememberReviewedText(in: previous)
+                }
+                if let current {
+                    textAtFocus = field.text[current]
+                    if !isCorrection { field.rememberReviewedText(in: current) }
+                }
             }
             if field.pendingReview != nil {
                 Text(lang.text("Review the other language before saving both versions."))
@@ -854,33 +878,58 @@ private struct FieldEditor: View {
                 Button(lang.text("Confirm both versions")) { field.pendingReview = nil }
             }
         }
+
+        if !field.effectiveText.isEmpty {
+            Toggle(lang.text("Edited during this review"), isOn: $field.userEdited)
+                .accessibilityIdentifier("\(field.kind.rawValue)-user-edited")
+        }
+    }
+
+    private func editTime() {
+        timeSelection = field.time
+        editingTime = true
     }
 
     private var exactTimeEditor: some View {
-        Group {
-            Picker(lang.text("Weekday"), selection: $field.time.weekday) {
-                ForEach(Weekday.allCases) { day in
-                    Text(lang.text(day.english)).tag(day)
+        NavigationStack {
+            Form {
+                Picker(lang.text("Weekday"), selection: $timeSelection.weekday) {
+                    ForEach(Weekday.allCases) { day in
+                        Text(lang.text(day.english)).tag(day)
+                    }
+                }
+                .accessibilityIdentifier("deadline-weekday")
+
+                DatePicker(lang.text("Clock time"), selection: clock, displayedComponents: .hourAndMinute)
+                    .environment(\.timeZone, .gmt)
+                    .accessibilityIdentifier("deadline-clock")
+
+                Toggle(lang.text("Arrive by this time"), isOn: $timeSelection.isCutoff)
+                LanguageLines(text: timeSelection.text, primary: lang)
+            }
+            .navigationTitle(lang.text("Time"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(lang.text("Cancel")) { editingTime = false }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(lang.text("Use time")) {
+                        field.confirmExactTime(timeSelection)
+                        editingTime = false
+                    }
+                    .accessibilityIdentifier("confirm-deadline")
                 }
             }
-            .accessibilityIdentifier("deadline-weekday")
-
-            DatePicker(lang.text("Clock time"), selection: clock, displayedComponents: .hourAndMinute)
-                .environment(\.timeZone, .gmt)
-                .accessibilityIdentifier("deadline-clock")
-
-            Toggle(lang.text("Arrive by this time"), isOn: $field.time.isCutoff)
-
-            LanguageLines(text: field.time.text, primary: lang)
         }
     }
 
     private var clock: Binding<Date> {
         Binding {
-            Date(timeIntervalSinceReferenceDate: TimeInterval(field.time.minuteOfDay * 60))
+            Date(timeIntervalSinceReferenceDate: TimeInterval(timeSelection.minuteOfDay * 60))
         } set: { date in
             let minutes = Int(date.timeIntervalSinceReferenceDate / 60)
-            field.time.minuteOfDay = (minutes % 1440 + 1440) % 1440
+            timeSelection.minuteOfDay = (minutes % 1440 + 1440) % 1440
         }
     }
 }

@@ -227,7 +227,7 @@ struct TaskDetailView: View {
             }
 
             VStack(alignment: .leading, spacing: 6) {
-                TicketField(kind: item.kind, text: item.text, edited: item.wasEditedDuringReview == true)
+                TicketField(kind: item.kind, text: item.text, edited: item.reviewedAsEdited)
 
                 if let turn = turns.first(where: { $0.id == item.sourceTurnID }) {
                     Button {

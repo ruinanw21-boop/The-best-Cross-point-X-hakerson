@@ -49,6 +49,40 @@ final class TaskStoreTests: XCTestCase {
         XCTAssertTrue(turns.allSatisfy { $0.taskID == enrollment.id })
     }
 
+    func testReconfirmingALegacyFieldKeepsItsEditFlagSourceAndChecklistState() throws {
+        let container = try makeContainer()
+        let store = TaskStore(context: container.mainContext)
+        let task = try create(.enrollment, in: store)
+        var reply = ReplyDraft(taskID: task.id)
+        reply.original = "Bring a passport"
+        let material = try XCTUnwrap(reply.fields.firstIndex { $0.kind == .material })
+        reply.fields[material].text = .init(english: "Passport", chinese: "")
+        let first = try store.confirmReply(reply)
+        let item = try XCTUnwrap(container.mainContext.fetch(FetchDescriptor<ActionItem>()).first)
+        item.wasEditedDuringReview = true
+        try store.toggleMaterial(item, for: task)
+
+        var unchanged = ReplyDraft(taskID: task.id, correcting: item)
+        unchanged.original = "Yes, a passport"
+        try store.confirmReply(unchanged)
+        let saved = try XCTUnwrap(store.loadTask(task.id).actions.first?.fields.first)
+        XCTAssertEqual(saved.sourceTurnID, first.id)
+        XCTAssertTrue(saved.isChecked)
+        XCTAssertTrue(saved.userEdited)
+
+        var changed = ReplyDraft(taskID: task.id, correcting: item)
+        changed.original = "Bring a passport copy"
+        var replacement = changed.fields[0]
+        replacement.edit("Passport copy", in: .english)
+        changed.applyReviewedField(replacement)
+        let latest = try store.confirmReply(changed)
+        let revised = try XCTUnwrap(store.loadTask(task.id).actions.first?.fields.first)
+        XCTAssertEqual(revised.id, saved.id)
+        XCTAssertEqual(revised.sourceTurnID, latest.id)
+        XCTAssertFalse(revised.isChecked)
+        XCTAssertFalse(revised.userEdited)
+    }
+
     func testDiskRoundTripRetainsTwoTasksAndMaterialProgress() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)

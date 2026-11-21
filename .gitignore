@@ -64,3 +64,13 @@ fastlane/test_output
 # Prepared by CampusCards/Scripts/prepare_offline_speech.py
 /CampusCards/CampusCards/Resources/OfflineSpeech/openai_whisper-base/
 /CampusCards/CampusCards/Resources/OfflineSpeech/tokenizer/
+/CampusCards/CampusCards/Resources/Simulator/.speech-*/
+/CampusCards/CampusCards/Resources/Simulator/OfflineSpeech/*
+!/CampusCards/CampusCards/Resources/Simulator/OfflineSpeech/.gitkeep
+
+# Local Python environment and credentials
+.venv/
+__pycache__/
+*.py[cod]
+.env
+.env.*

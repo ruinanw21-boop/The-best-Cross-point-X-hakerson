@@ -70,6 +70,45 @@ final class ReplyWorkflowTests: XCTestCase {
         XCTAssertFalse(restored.canConfirm)
     }
 
+    func testSavingAFieldSheetTracksEditsAcrossReopens() throws {
+        var draft = ReplyDraft(taskID: UUID())
+        var material = FieldDraft(kind: .material)
+        material.edit("Passport", in: .english)
+        draft.applyReviewedField(material)
+        XCTAssertFalse(try XCTUnwrap(draft.fields.last).userEdited)
+
+        var cached = try JSONDecoder().decode(ReplyDraft.self, from: JSONEncoder().encode(draft))
+        var reopened = try XCTUnwrap(cached.fields.last)
+        XCTAssertEqual(reopened.id, material.id)
+        reopened.edit("Passport copy", in: .english)
+        cached.applyReviewedField(reopened)
+        XCTAssertTrue(try XCTUnwrap(cached.fields.last).userEdited)
+
+        var original = FieldDraft(kind: .material)
+        original.edit("Old requirement", in: .english)
+        var correction = ReplyDraft(taskID: UUID(), correctingActionID: UUID(), changes: [original])
+        correction.applyReviewedField(original)
+        var replacement = correction.fields[0]
+        replacement.edit("New requirement", in: .english)
+        correction.applyReviewedField(replacement)
+        XCTAssertFalse(correction.fields[0].userEdited)
+        replacement = correction.fields[0]
+        replacement.edit("Reviewed replacement", in: .english)
+        correction.applyReviewedField(replacement)
+        XCTAssertTrue(correction.fields[0].userEdited)
+    }
+
+    func testExplicitReviewChoiceOverridesAnOlderCachedEditedFlag() throws {
+        var legacy = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(
+            FieldDraft(kind: .material)
+        )) as? [String: Any])
+        legacy["wasEditedDuringReview"] = true
+        var field = try JSONDecoder().decode(FieldDraft.self, from: JSONSerialization.data(withJSONObject: legacy))
+        XCTAssertTrue(field.userEdited)
+        field.userEdited = false
+        XCTAssertFalse(try JSONDecoder().decode(FieldDraft.self, from: JSONEncoder().encode(field)).userEdited)
+    }
+
     func testLateSuccessAndErrorCannotReplaceEditedSourceOrTranslation() throws {
         var draft = ReplyDraft(taskID: UUID())
         draft.original = "周五 16:00 前"
