@@ -3,7 +3,9 @@ import Foundation
 struct ReplyDraft: Codable, Equatable {
     let id: UUID
     let taskID: UUID
+    // The existing checklist UI and older cached drafts address one field row.
     let correctedActionID: UUID?
+    let targetActionID: UUID?
     var kind: ReplyKind
     private var sourceLanguage = CardLanguage.chinese
     var language: CardLanguage {
@@ -43,7 +45,7 @@ struct ReplyDraft: Codable, Equatable {
         case translation
     }
     private enum CodingKeys: String, CodingKey {
-        case id, taskID, correctedActionID, kind, original, originalText
+        case id, taskID, correctedActionID, targetActionID, kind, original, originalText
         case sourceLanguage = "language"
         case recordingRef, translation, speaker, fields, version, receivedTranslation
     }
@@ -65,9 +67,11 @@ struct ReplyDraft: Codable, Equatable {
         self.id = UUID()
         self.taskID = taskID
         correctedActionID = action?.id
+        targetActionID = action?.actionID
         if let action {
             kind = .correction
             var field = FieldDraft(kind: action.kind)
+            field.targetFieldID = action.id
             field.text = action.time == nil ? action.text : .init()
             if let time = action.time {
                 field.useExactTime = true
@@ -78,6 +82,16 @@ struct ReplyDraft: Codable, Equatable {
             kind = .requirements
             fields = RequirementKind.allCases.map { FieldDraft(kind: $0) }
         }
+    }
+
+    // Use a field ID for a particular material when this action contains several.
+    init(taskID: UUID, correctingActionID: UUID, changes: [FieldDraft]) {
+        id = UUID()
+        self.taskID = taskID
+        correctedActionID = nil
+        targetActionID = correctingActionID
+        kind = .correction
+        fields = changes
     }
 
     var confirmedFields: [FieldDraft] {
@@ -195,10 +209,49 @@ struct ReplyDraft: Codable, Equatable {
 struct FieldDraft: Codable, Equatable, Identifiable {
     var id = UUID()
     let kind: RequirementKind
+    var targetFieldID: UUID?
     var text = BilingualText()
     var pendingReview: CardLanguage?
     var useExactTime = false
     var time = ConfirmedTime()
+
+    // These are optional so a pending draft from an earlier app version still decodes.
+    private var reviewTextBaseline: BilingualText?
+    private var reviewTimeBaseline: ConfirmedTime?
+    private var editOverride: Bool?
+
+    init(kind: RequirementKind) { self.kind = kind }
+
+    var userEdited: Bool {
+        get {
+            if let editOverride { return editOverride }
+            if let confirmedTime {
+                return reviewTimeBaseline.map { $0 != confirmedTime } ?? false
+            }
+            guard let baseline = reviewTextBaseline else { return false }
+            return CardLanguage.allCases.contains { language in
+                language != pendingReview && !baseline[language].isEmpty
+                    && baseline[language] != text[language].cleaned
+            }
+        }
+        set { editOverride = newValue }
+    }
+
+    // Capture a complete entry when an editor changes focus, never its first keystroke.
+    mutating func rememberReviewedText(in language: CardLanguage) {
+        let value = text[language].cleaned
+        var baseline = reviewTextBaseline ?? BilingualText()
+        guard !value.isEmpty, baseline[language].isEmpty else { return }
+        baseline[language] = value
+        reviewTextBaseline = baseline
+    }
+
+    // The first complete selection reflects this reply, including when it replaces an older deadline.
+    mutating func confirmExactTime(_ selection: ConfirmedTime) {
+        if reviewTimeBaseline == nil { reviewTimeBaseline = selection }
+        time = selection
+        useExactTime = true
+    }
 
     var confirmedTime: ConfirmedTime? { useExactTime && kind == .deadline ? time : nil }
 

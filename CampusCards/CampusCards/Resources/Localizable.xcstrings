@@ -386,6 +386,17 @@
         }
       }
     },
+    "Edit time": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "编辑时间"
+          }
+        }
+      }
+    },
     "Edit translation": {
       "extractionState": "manual",
       "localizations": {
@@ -393,6 +404,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "编辑译文"
+          }
+        }
+      }
+    },
+    "Edited during this review": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "本轮核对时手动修改"
           }
         }
       }
@@ -1251,6 +1273,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "周三"
+          }
+        }
+      }
+    },
+    "Use time": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "确认时间"
           }
         }
       }

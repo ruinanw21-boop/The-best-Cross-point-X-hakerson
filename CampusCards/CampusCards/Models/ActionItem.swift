@@ -75,7 +75,10 @@ enum Weekday: Int, Codable, CaseIterable, Identifiable {
 final class ActionItem {
     @Attribute(.unique) var id: UUID
     var taskID: UUID
+    // Each row is a field. All fields created for one checklist action share this ID.
+    var actionID: UUID?
     var sourceTurnID: UUID
+    var userEdited: Bool = false
     var kindCode: String
     var valueEnglish: String
     var valueChinese: String
@@ -85,10 +88,12 @@ final class ActionItem {
     var isChecked: Bool
     var createdAt: Date
 
-    init(taskID: UUID, sourceTurnID: UUID, field: FieldDraft, createdAt: Date) {
+    init(taskID: UUID, actionID: UUID = UUID(), sourceTurnID: UUID, field: FieldDraft, createdAt: Date) {
         id = UUID()
         self.taskID = taskID
+        self.actionID = actionID
         self.sourceTurnID = sourceTurnID
+        userEdited = field.userEdited
         kindCode = field.kind.rawValue
         valueEnglish = field.confirmedText.english
         valueChinese = field.confirmedText.chinese
@@ -113,16 +118,15 @@ final class ActionItem {
     var text: BilingualText { time?.text ?? .init(english: valueEnglish, chinese: valueChinese) }
 
     func revise(from field: FieldDraft, sourceTurnID: UUID) {
-        let previousText = text
-        let previousTime = time
+        // Reconfirming an unchanged field keeps its earlier source and checklist state.
+        guard time != field.confirmedTime || text != field.effectiveText else { return }
         self.sourceTurnID = sourceTurnID
+        userEdited = field.userEdited
         valueEnglish = field.confirmedText.english
         valueChinese = field.confirmedText.chinese
         timeWeekday = field.confirmedTime?.weekday.rawValue
         timeMinute = field.confirmedTime?.minuteOfDay
         timeIsCutoff = field.confirmedTime?.isCutoff ?? true
-        if previousText != text || previousTime != time {
-            isChecked = false
-        }
+        isChecked = false
     }
 }
