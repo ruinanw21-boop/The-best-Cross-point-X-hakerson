@@ -10,14 +10,7 @@ actor OfflineTranscriber {
     static let shared = OfflineTranscriber()
 
     static var computeOptions: ModelComputeOptions {
-        var options = ModelComputeOptions()
-        #if targetEnvironment(simulator)
-        // v1.1.1 forces CPU-only in the simulator initializer. Permit Core ML
-        // to choose its backend for the encoder and decoder on Apple Silicon.
-        options.audioEncoderCompute = .all
-        options.textDecoderCompute = .all
-        #endif
-        return options
+        ModelComputeOptions()
     }
 
     private let diagnosticLogging: Bool
