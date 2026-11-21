@@ -6,6 +6,8 @@ Open `CampusCards.xcodeproj` in Xcode, select the shared **CampusCards** scheme 
 
 Before building for offline speech, run `python3 CampusCards/Scripts/prepare_offline_speech.py` from the repository root. This verifies the multilingual base model and tokenizer and places them in the app's bundle resources. Hold either microphone under **Record reply**, release to review, and tap **Play recording** to listen.
 
+On macOS the same command also compiles the bundled encoder and decoder source programs with the selected Xcode for the iOS Simulator. Run it again after switching Xcode versions. Xcode selects the matching resource directory when building for a simulator or device.
+
 ### Demo walkthrough
 
 1. On the English home screen, choose **New task → Submit enrollment documents → Create task**. Open **Show card** and try **Swap card languages**.
@@ -40,7 +42,7 @@ The app keeps pending replies and confirmed history on the device. Requesting a 
 
 ### 03 离线录音、转写和回听
 
-在 Mac 上从仓库根目录执行以下命令，再用 Xcode 构建 `CampusCards` App target。第一条命令下载任务指定的多语模型和 tokenizer，第二条命令可在断网时逐文件校验 SHA-256。Xcode 会将准备好的 `OfflineSpeech` 整个目录复制进 App。安装后首次转写直接从 App 包读取资源。更换 Mac 或重新克隆时需重新准备。
+在 Mac 上从仓库根目录执行以下命令，再用 Xcode 构建 `CampusCards` App target。第一条命令准备多语模型和 tokenizer，并用当前 Xcode 将同一组权重和原始编码器、解码器程序编译给模拟器。第二条命令可在断网时逐文件校验原始资源的 SHA-256。Xcode 按构建目标选择对应的 `OfflineSpeech` 目录，安装后的首次转写直接从 App 包读取。切换 Xcode 版本或重新克隆后需再执行第一条命令。
 
 ```sh
 python3 CampusCards/Scripts/prepare_offline_speech.py
