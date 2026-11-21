@@ -4,10 +4,10 @@
 
 ## English
 
-**“Before I leave the counter, I know what to do next.”** Bilingual Campus Cards is a planned iPhone app for international students visiting a Chinese-speaking campus service desk for the first time. A student prepares a question in English, shows it in Chinese, checks the reply with the staff member, and leaves with a bilingual checklist they can reopen the next day.
+**“Before I leave the counter, I know what to do next.”** Bilingual Campus Cards is an iPhone prototype for international students visiting a Chinese-speaking campus service desk for the first time. A student prepares a question in English, shows it in Chinese, checks the reply with the staff member, and leaves with a bilingual checklist they can reopen the next day.
 
 **Track**　CrossPointX 2026 · Apple Human-Centered Care  
-**Status**　Design stage. The Xcode project, runnable build, and demo link are pending. [Development plan (in Chinese)](双语办事卡_开发方案.md)
+**Status**　The first text-entry demo is available for iOS 18 and later. Open `CampusCards/CampusCards.xcodeproj` in Xcode and run the shared **CampusCards** scheme on an iPhone simulator. [Demo walkthrough](CampusCards/README.md) [Development plan (in Chinese)](双语办事卡_开发方案.md)
 
 ### From a question to a checklist
 
@@ -30,9 +30,9 @@ For example, a staff member says, “周五四点前，把护照复印件交到�
 
 ### Language controls
 
-The interface will open in **English** on first launch, including on iPhones set to Chinese. Students can choose **English** or **简体中文** under **Language / 语言** on the home screen or within a task. The screen updates immediately, keeps the current draft, and remembers the choice after relaunch.
+The interface opens in **English** on first launch, including on iPhones set to Chinese. Students can choose **English** or **简体中文** under **Language / 语言** on the home screen or within a task. The screen updates immediately, keeps the current draft, and remembers the choice after relaunch.
 
-When a student shows the phone to someone, the card initially puts Chinese in large type with English underneath. They can swap the display order. The microphone has its own language selector so a staff member can dictate in Mandarin while the student keeps the interface in English.
+When a student shows the phone to someone, the card initially puts Chinese in large type with English underneath. They can swap the display order. The planned microphone input has its own language selector so a staff member can dictate in Mandarin while the student keeps the interface in English.
 
 ### iOS implementation plan
 
@@ -61,7 +61,7 @@ During a user test, ask the student to put the phone away and explain what to br
 **《离开柜台前，我知道下一步做什么》** 是为第一次用中文在校园办事的国际新生设计的 iPhone 原型。学生出发前用英语写下要办的事，在路上出示中文问路卡，在柜台和工作人员一起核对答复，离开时带走一份可以照着做的双语清单。
 
 **赛道**　CrossPointX 2026 · Apple Human-Centered Care  
-**开发状态**　方案阶段。以下描述为原型目标。Xcode 工程、可运行构建和演示链接待提交。[开发方案](双语办事卡_开发方案.md)
+**开发状态**　首版文字 Demo 已提供，支持 iOS 18 及以上。在 Xcode 打开 `CampusCards/CampusCards.xcodeproj`，选择 **CampusCards** scheme 和 iPhone 模拟器运行。[演示步骤](CampusCards/README.md) [开发方案](双语办事卡_开发方案.md)
 
 ### 一张卡怎样帮学生办完一件事
 
@@ -86,7 +86,7 @@ During a user test, ask the student to put the phone away and explain what to br
 
 首次启动默认显示**英文**，即使 iPhone 的系统语言是中文。学生可在首页或事项内点开 **Language / 语言**，选择 **English** 或**简体中文**。当前页面立即换语言，保留正在编辑的草稿，下次打开沿用上次选择。
 
-把手机递给别人时，卡片默认放大中文，下方保留英文，可以交换主次。麦克风旁可单独选择识别语言，学生用英文界面也能直接记录工作人员的普通话答复。
+把手机递给别人时，卡片默认放大中文，下方保留英文，可以交换主次。后续接入录音时，麦克风旁可单独选择识别语言，学生用英文界面也能直接记录工作人员的普通话答复。
 
 ### iOS 实现计划
 
